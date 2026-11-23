@@ -990,6 +990,19 @@
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
+      "away": "Loyola Chicago",
+      "awayEspnTeamId": "2350",
+      "awayScore": 72,
+      "date": "2026-11-22",
+      "eventId": "401911233",
+      "firstObservedAtUtc": "2026-11-23T12:17:25.977278Z",
+      "home": "San Jose St.",
+      "homeEspnTeamId": "23",
+      "homeScore": 63,
+      "scheduledStartUtc": "2026-11-23T04:59:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
       "away": "Richmond",
       "awayEspnTeamId": "257",
       "awayScore": 68,
@@ -1783,6 +1796,32 @@
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
+      "away": "Portland",
+      "awayEspnTeamId": "2501",
+      "awayScore": 71,
+      "date": "2026-11-22",
+      "eventId": "401917541",
+      "firstObservedAtUtc": "2026-11-23T12:17:25.977278Z",
+      "home": "California Baptist",
+      "homeEspnTeamId": "2856",
+      "homeScore": 79,
+      "scheduledStartUtc": "2026-11-23T00:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
+      "away": "UC San Diego",
+      "awayEspnTeamId": "28",
+      "awayScore": 64,
+      "date": "2026-11-22",
+      "eventId": "401917542",
+      "firstObservedAtUtc": "2026-11-23T12:17:25.977278Z",
+      "home": "Seattle U",
+      "homeEspnTeamId": "2547",
+      "homeScore": 90,
+      "scheduledStartUtc": "2026-11-23T02:45:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
       "away": "Central Ark.",
       "awayEspnTeamId": "2110",
       "awayScore": 66,
@@ -2144,6 +2183,19 @@
       "homeEspnTeamId": "45",
       "homeScore": 76,
       "scheduledStartUtc": "2026-11-20T19:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
+      "away": "Rhode Island",
+      "awayEspnTeamId": "227",
+      "awayScore": 79,
+      "date": "2026-11-22",
+      "eventId": "401919020",
+      "firstObservedAtUtc": "2026-11-23T12:17:25.977278Z",
+      "home": "UAB",
+      "homeEspnTeamId": "5",
+      "homeScore": 64,
+      "scheduledStartUtc": "2026-11-23T00:40:00Z",
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
@@ -3265,6 +3317,19 @@
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
+      "away": "Delaware",
+      "awayEspnTeamId": "48",
+      "awayScore": 48,
+      "date": "2026-11-22",
+      "eventId": "401920905",
+      "firstObservedAtUtc": "2026-11-23T12:17:25.977278Z",
+      "home": "UCLA",
+      "homeEspnTeamId": "26",
+      "homeScore": 85,
+      "scheduledStartUtc": "2026-11-23T00:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
       "away": "NIU",
       "awayEspnTeamId": "2459",
       "awayScore": 72,
@@ -3704,6 +3769,19 @@
       "homeEspnTeamId": "2617",
       "homeScore": 72,
       "scheduledStartUtc": "2026-11-22T22:30:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
+      "away": "UT Martin",
+      "awayEspnTeamId": "2630",
+      "awayScore": 76,
+      "date": "2026-11-22",
+      "eventId": "401921206",
+      "firstObservedAtUtc": "2026-11-23T12:17:25.977278Z",
+      "home": "Utah Valley",
+      "homeEspnTeamId": "3084",
+      "homeScore": 78,
+      "scheduledStartUtc": "2026-11-23T01:10:00Z",
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
@@ -5212,6 +5290,19 @@
       "homeEspnTeamId": "30",
       "homeScore": 96,
       "scheduledStartUtc": "2026-11-20T04:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
+      "away": "Louisiana",
+      "awayEspnTeamId": "309",
+      "awayScore": 56,
+      "date": "2026-11-22",
+      "eventId": "401926774",
+      "firstObservedAtUtc": "2026-11-23T12:17:25.977278Z",
+      "home": "Southern California",
+      "homeEspnTeamId": "30",
+      "homeScore": 82,
+      "scheduledStartUtc": "2026-11-23T01:00:00Z",
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
