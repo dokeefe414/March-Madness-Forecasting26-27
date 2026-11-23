@@ -78,12 +78,15 @@ class EloV2Tests(unittest.TestCase):
               "throughDay":118,"isComplete":False,
               "teams":[{"name":"Florida","rating":1740.0},
                        {"name":"Connecticut","rating":1680.0}]}
-        names={"Florida","florida","UConn","Connecticut"}
+        names={"Florida","UConn","Connecticut"}
         matched,report=source_priors(prev,names)
         self.assertEqual(matched["Florida"],1740)
-        self.assertEqual(matched["florida"],1740)
         self.assertEqual(matched["Connecticut"],1680)
         self.assertNotIn("UConn",matched)
+        ambiguous,guard=source_priors(prev,names|{"florida"})
+        self.assertNotIn("Florida",ambiguous)
+        self.assertNotIn("florida",ambiguous)
+        self.assertEqual(guard["ambiguousCurrentNameGroupsWithheld"],1)
         self.assertFalse(report["snapshotIsComplete"])
         self.assertIn("not approved",report["identityWarning"])
         wrong=copy.deepcopy(prev);wrong["sourceCommit"]="unverified"
