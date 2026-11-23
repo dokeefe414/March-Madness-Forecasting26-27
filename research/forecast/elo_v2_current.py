@@ -76,8 +76,15 @@ def _to_games(records:list[dict],season:int=2027)->tuple[list[Game],dict[int,str
 
 
 def _cohort_rank(engine:Elo2Engine,ratings:dict)->list[dict]:
-    sourced={t["name"]:t for t in ratings["teams"] if t.get("divisionIConfirmed") is True
-             and str(t.get("espnSourceTeamId") or "").strip()}
+    source_rows=[t for t in ratings["teams"] if t.get("divisionIConfirmed") is True
+                 and str(t.get("espnSourceTeamId") or "").strip()
+                 and int(t.get("wins",0))+int(t.get("losses",0))>0]
+    # The site-wide rank can contain non-D-I opponents and projected-form
+    # positions. Compare like with like: raw-rating ranks among the SAME
+    # source-linked D-I cohort only, not incompatible public rank numbers.
+    source_rows.sort(key=lambda t:(-float(t["rating"]),t["name"]))
+    sourced={t["name"]:{**t,"baselineD1Rank":i+1}
+             for i,t in enumerate(source_rows)}
     # Current model's D-I + ESPN linkage is reused only as a source *ID
     # comparator*. New historical prior matched by name is NOT approved.
     rows=[]
@@ -92,7 +99,7 @@ def _cohort_rank(engine:Elo2Engine,ratings:dict)->list[dict]:
             "opponentScheduleBonus":round(engine.schedule_adjustment(state.team_id),2),
             "games":state.games,
             "baselineElo":float(source["rating"]),
-            "baselineRank":int(source["rank"]),
+            "baselineRank":int(source["baselineD1Rank"]),
             "wins":state.wins,"losses":state.losses,
             "offseasonPrior":round(engine.initial_ratings.get(state.team_id,1500),1),
             "hasHistoricalMatch":state.team_id in engine.initial_ratings,
