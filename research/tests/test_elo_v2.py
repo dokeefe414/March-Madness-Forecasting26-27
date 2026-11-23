@@ -85,7 +85,7 @@ class EloV2Tests(unittest.TestCase):
         self.assertEqual(matched["Connecticut"],1680)
         self.assertNotIn("UConn",matched)
         self.assertFalse(report["snapshotIsComplete"])
-        self.assertIn("NOT",report["identityWarning"])
+        self.assertIn("not approved",report["identityWarning"])
         wrong=copy.deepcopy(prev);wrong["sourceCommit"]="unverified"
         with self.assertRaisesRegex(ValueError,"provenance"):
             source_priors(wrong,names)
