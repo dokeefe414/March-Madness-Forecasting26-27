@@ -47,13 +47,21 @@ def source_priors(snapshot:dict,names:set[str])->tuple[dict[str,float],dict]:
         prior_names[key]=rating
     for key in duplicates:
         prior_names.pop(key,None)
-    matches={n:prior_names[n.casefold()] for n in names if n.casefold() in prior_names}
+    current_by_key={}
+    for name in names:
+        current_by_key.setdefault(name.casefold(),[]).append(name)
+    # An apparent duplicate school-name identity must not assign one
+    # historical prior to two distinct 2027 IDs.
+    ambiguous_current={key for key,values in current_by_key.items() if len(values)!=1}
+    matches={n:prior_names[n.casefold()] for n in names
+             if n.casefold() in prior_names and n.casefold() not in ambiguous_current}
     return matches,{
         "snapshotSeason":2026,"snapshotThroughKaggleDay":118,
         "snapshotIsComplete":False,"snapshotSourceCommit":SOURCE_COMMIT,
         "joinPolicy":"Exact case-insensitive school NAME ONLY, not authoritative season-spanning NCAA/Kaggle ID linkage",
         "matchedTeamNames":len(matches),"sourceHistoricalTeams":len(snapshot["teams"]),
         "unmatchedTeamNames":len(names)-len(matches),
+        "ambiguousCurrentNameGroupsWithheld":len(ambiguous_current),
         "identityWarning":"The 2026 historical source is incomplete, and school names alone cannot prove a program identity. Research-only candidate, not approved for live promotion.",
     }
 
