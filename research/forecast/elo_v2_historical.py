@@ -105,6 +105,21 @@ def _aggregate(rows:list[dict],variant:str,subkey:str="variants")->dict:
     for field in fields:
         out[field]=round(sum(r[field]*r["games"] for r in records)/n,6)
     out["brierGain"]=round(out["baselineBrier"]-out["challengerBrier"],6)
+    # Aggregate actual sufficient statistics from SAME fixtures across
+    # historical years, rather than averaging five-bin ECE percentages
+    # computed on different year-specific bin populations.
+    for source,dest in (("baselineCalibrationBins","baselineECE"),
+                        ("challengerCalibrationBins","challengerECE")):
+        total=[[0,0.0,0.0] for _ in range(5)]
+        for row in records:
+            for idx,(count,forecast_sum,actual_sum) in enumerate(row[source]):
+                total[idx][0]+=count
+                total[idx][1]+=forecast_sum
+                total[idx][2]+=actual_sum
+        out[dest]=round(sum(abs(pred/c-actual/c)*c
+                            for c,pred,actual in total if c)/n,6)
+        out[source]=[[int(c),round(pred,5),round(actual,5)]
+                     for c,pred,actual in total]
     return out
 
 
