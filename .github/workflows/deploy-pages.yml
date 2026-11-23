@@ -73,10 +73,18 @@ jobs:
         env:
           PYTHONPATH: research
         run: python -m forecast.model_championship --web-dir web --out web/public/research/model-championship.json
+      - name: Evaluate independent Elo 2.0 across held-out prior-year historical games
+        env:
+          PYTHONPATH: research
+        run: python -m forecast.elo_v2_historical --out web/public/research/elo-v2-historical.json
       - name: Validate and build 2027 NCAA-source results
         env:
           PYTHONPATH: research
         run: python -m forecast.live --model-report web/public/research/benchmark.json --out web/public/current/2027.json --games-out web/public/current/2027-games.json --box-out web/public/current/2027-box-games.json --espn-receipts-path web/public/forecasts/espn-final-receipts.json
+      - name: Publish source-aligned Elo 2.0 shadow rankings and AP three-way research
+        env:
+          PYTHONPATH: research
+        run: python -m forecast.elo_v2_current --games web/public/current/2027-games.json --ratings web/public/current/2027.json --previous web/public/seasons/2026.json --ap web/public/research/ap-poll-history.json --historical web/public/research/elo-v2-historical.json --out web/public/current/elo-v2-research.json
       - name: Retrain 2027 logistic model on earlier game dates and walk-forward score
         env:
           PYTHONPATH: research
