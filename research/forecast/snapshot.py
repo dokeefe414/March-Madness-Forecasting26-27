@@ -23,7 +23,7 @@ from zoneinfo import ZoneInfo
 
 from .core import matchup_probability
 from .reference import canonical
-from .live import SOURCE_URL, final_games, fetch_csv
+from .live import SOURCE_URL, final_games, fetch_csv, build_current
 from .retrain import validate_for_pick, probability as online_probability
 from .forward_ensemble import candidate as ensemble_candidate, validate_for_fixture as validate_ensemble
 from .performance import summarize_forward
@@ -94,11 +94,71 @@ def _one_team(side: dict, name_index: dict[str, list[dict]],
     return next(iter(matched.values())) if len(matched) == 1 else None
 
 
+
+# Only source-backed results strictly BEFORE a scheduled game date may
+# influence its probability, even when the latest public Elo includes a
+# completed game from this morning. Rebuild from the accepted, timestamp-
+# paired score ledger instead of allowing same-day hindsight to leak.
+_SAFE_RATING_FIELDS = (
+    "rating", "projectedRating", "trend", "wins", "losses", "history",
+    "pointsForPerGame", "pointsAgainstPerGame", "marginPerGame",
+    "opponentAverageElo", "opponentAverageEloAtGame",
+    "adaptiveRating", "regimeShift", "volatility", "ewmaSlope",
+    "gamesObserved", "sampleStatus",
+)
+_SAFE_EMPTY = {
+    "rating": 1500.0, "projectedRating": 1500.0, "trend": 0.0,
+    "wins": 0, "losses": 0, "history": [1500.0],
+    "pointsForPerGame": None, "pointsAgainstPerGame": None,
+    "marginPerGame": None, "opponentAverageElo": None,
+    "opponentAverageEloAtGame": None, "adaptiveRating": 1500.0,
+    "regimeShift": 0.0, "volatility": 0.0, "ewmaSlope": 0.0,
+    "gamesObserved": 0, "sampleStatus": "insufficient",
+}
+# Same-day full-source possession and efficiency values are not safe inputs
+# to an archived pregame scoring estimate. A safe replay is allowed to
+# abstain on score projection while still publishing a source-valid winner.
+_UNSAFE_FULL_DAY_FEATURES = (
+    "adjOff100", "adjDef100", "offRating100", "defRating100",
+    "pacePossessions", "possessionGames",
+)
+
+def date_frozen_ratings(ratings: dict, scored_games: list[dict],
+                        cutoff_date: str) -> tuple[dict[str, dict], str | None]:
+    """Replay production Elo from accepted results dated strictly before D.
+
+    Copies verified current team identities but *never* their full-day
+    statistics. Unplayed teams get the model's documented 1500 starting
+    prior, not an invented win/loss history. All outputs are ephemeral.
+    """
+    expected = ratings.get("regularSeasonGames")
+    if expected is not None and len(scored_games) != expected:
+        raise ValueError("scored-game ledger and ratings game counts differ")
+    recorded = max((g["date"] for g in scored_games), default=None)
+    if recorded != ratings.get("lastGameDate"):
+        raise ValueError("scored-game ledger and ratings last result date differ")
+    earlier = [g for g in scored_games if g["date"] < cutoff_date]
+    # forecast.live.build_current is the actual production Elo replay, with
+    # exact score-margin, venue and same-day-frozen update semantics.
+    replay = build_current(earlier) if earlier else {"teams": []}
+    by_name = {t["name"]: t for t in replay["teams"]}
+    result = {}
+    for source in ratings["teams"]:
+        team = dict(source)
+        old = by_name.get(source["name"], _SAFE_EMPTY)
+        for field in _SAFE_RATING_FIELDS:
+            team[field] = old[field] if field in old else _SAFE_EMPTY.get(field)
+        for field in _UNSAFE_FULL_DAY_FEATURES:
+            team.pop(field, None)
+        result[team["name"]] = team
+    return result, max((g["date"] for g in earlier), default=None)
+
 def forecast_scheduled(scoreboards: list[dict], ratings: dict,
                        generated_at: datetime, online_model: dict | None = None,
                        state_space: dict | None = None,
                        opponent_model: dict | None = None,
-                       ensemble_model: dict | None = None) -> dict:
+                       ensemble_model: dict | None = None,
+                       scored_games: list[dict] | None = None) -> dict:
     """Strict as-of future-start verification and source identity matching."""
     generated_at = generated_at.astimezone(timezone.utc)
     retrieved = parse_time(ratings["retrievedAtUtc"])
@@ -122,6 +182,8 @@ def forecast_scheduled(scoreboards: list[dict], ratings: dict,
            opponent_model.get("mode") != "research-only"):
         raise ValueError("opponent model does not match the scored-game source")
     unique: dict[str, dict] = {}
+    rejection_reasons: dict[str, str] = {}
+    safe_by_date: dict[str, tuple[dict[str, dict], str | None]] = {}
     counters = {"eventsSeen": 0, "notScheduled": 0, "startedOrTooClose": 0,
                 "unmatchedOrAmbiguous": 0, "duplicateIds": 0,
                 "unsafeSameDateRatings": 0}
@@ -149,11 +211,13 @@ def forecast_scheduled(scoreboards: list[dict], ratings: dict,
             away_sides = [s for s in sides if s.get("homeAway") == "away"]
             if len(home_sides) != 1 or len(away_sides) != 1:
                 counters["unmatchedOrAmbiguous"] += 1
+                rejection_reasons[event_id] = "invalid-competitor-sides"
                 continue
             home = _one_team(home_sides[0], name_index, id_index)
             away = _one_team(away_sides[0], name_index, id_index)
             if not home or not away or home["teamId"] == away["teamId"]:
                 counters["unmatchedOrAmbiguous"] += 1
+                rejection_reasons[event_id] = "unverified-team-identity"
                 continue
             if event_id in unique:
                 counters["duplicateIds"] += 1
@@ -165,9 +229,20 @@ def forecast_scheduled(scoreboards: list[dict], ratings: dict,
             # An upstream 2027 score snapshot may have an unverified same-day
             # nonzero in-progress row. Require the last included game's date
             # strictly earlier than the scheduled local fixture day.
-            if ratings.get("lastGameDate") and ratings["lastGameDate"] >= future_eastern_day:
-                counters["unsafeSameDateRatings"] += 1
-                continue
+            replayed = bool(ratings.get("lastGameDate") and
+                            ratings["lastGameDate"] >= future_eastern_day)
+            rating_through_date = ratings.get("lastGameDate")
+            if replayed:
+                if scored_games is None:
+                    counters["unsafeSameDateRatings"] += 1
+                    rejection_reasons[event_id] = "missing-verified-prior-date-replay"
+                    continue
+                if future_eastern_day not in safe_by_date:
+                    safe_by_date[future_eastern_day] = date_frozen_ratings(
+                        ratings, scored_games, future_eastern_day)
+                safe, rating_through_date = safe_by_date[future_eastern_day]
+                home = safe[home["name"]]
+                away = safe[away["name"]]
             candidate = None
             if (not neutral and online_model and
                 online_model.get("mode") in ("active","shadow")):
@@ -243,7 +318,13 @@ def forecast_scheduled(scoreboards: list[dict], ratings: dict,
                 "ensembleHomeWinProbability":(ensemble_result["homeWinProbability"] if ensemble_result else None),
                 "ensembleComponentCount":(ensemble_result["componentCount"] if ensemble_result else None),
                 "ensembleResearchWeight":(ensemble_result["weight"] if ensemble_result else None),
-                "researchScoreProjection":score_shadow(home,away),
+                "researchScoreProjection":None if replayed else score_shadow(home,away),
+                "ratingReplayMode":"prior-date-safe" if replayed else "current-source",
+                "ratingCutoffExclusive":future_eastern_day,
+                "ratingSourceIncludedThroughDate":rating_through_date,
+                "ratingInputs":({side:{key:team.get(key) for key in _SAFE_RATING_FIELDS}
+                                 for side,team in (("home",home),("away",away))}
+                                if replayed else None),
                 "modelId": selected.get("modelId") if selected else None,
                 "modelTrainingThroughDate": selected.get("trainedThroughDate") if selected else None,
                 "match": "exact canonical NCAA name to ESPN team location/display",
@@ -258,6 +339,7 @@ def forecast_scheduled(scoreboards: list[dict], ratings: dict,
         "ratingSource": ratings.get("sourceUrl", SOURCE_URL),
         "timeBufferMinutes": BUFFER_MINUTES,
         "predictions": result, "coverage": {**counters, "published": len(result)},
+        "rejectionReasons": rejection_reasons,
         "limitations": [
             "Missing/ambiguous ESPN ↔ NCAA name matches are excluded, never guessed.",
             "ESPN scheduled start may change; this records its as-of state, not proof of the actual tip-off.",
@@ -491,6 +573,8 @@ def write_ledger(out_dir: Path, snapshot: dict, finals: list[dict], now: datetim
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--ratings", type=Path, default=Path("web/public/current/2027.json"))
+    parser.add_argument("--games", type=Path, default=Path("web/public/current/2027-games.json"),
+                        help="Exact accepted scored games from the same source retrieval as ratings")
     parser.add_argument("--online-model", type=Path, help="Current-source 2027 chronologically retrained model JSON")
     parser.add_argument("--state-space", type=Path, help="Optional same-source causal experimental team-state report")
     parser.add_argument("--opponent-model", type=Path, help="Optional same-source opponent-adjusted research report")
@@ -501,6 +585,11 @@ def main() -> None:
     args = parser.parse_args()
     now = datetime.now(timezone.utc)
     ratings = json.loads(args.ratings.read_text(encoding="utf-8"))
+    games_file = json.loads(args.games.read_text(encoding="utf-8"))
+    if (games_file.get("season") != 2027 or
+        games_file.get("retrievedAtUtc") != ratings.get("retrievedAtUtc")):
+        raise ValueError("Archived score ledger and ratings retrieval mismatch")
+    scored_games = games_file["games"]
     online_model = json.loads(args.online_model.read_text(encoding="utf-8")) if args.online_model else None
     state_space = json.loads(args.state_space.read_text(encoding="utf-8")) if args.state_space else None
     opponent_model = json.loads(args.opponent_model.read_text(encoding="utf-8")) if args.opponent_model else None
@@ -548,7 +637,7 @@ def main() -> None:
         schedule_changes = detect_schedule_changes(all_old, list(by_date.values()))
     forecast = forecast_scheduled(scoreboards, ratings, now, online_model=online_model,
                                   state_space=state_space, opponent_model=opponent_model,
-                                  ensemble_model=ensemble_model)
+                                  ensemble_model=ensemble_model, scored_games=scored_games)
     if args.finals_csv:
         finals_text = args.finals_csv.read_text(encoding="utf-8-sig")
     else:

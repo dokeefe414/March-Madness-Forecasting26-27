@@ -21,7 +21,9 @@ type Fixture={eventId:string;scheduledStartUtc:string;scheduledEasternDate:strin
   adaptiveStateSpaceHomeWinProbability?:number|null;
   ensembleHomeWinProbability?:number|null;ensembleResearchWeight?:number|null;ensembleComponentCount?:number|null;
   driftWatch?:{home:boolean|null;away:boolean|null;homeInnovations?:number[];awayInnovations?:number[]};
-  modelId?:string|null;reason?:string|null;homeProfile?:Profile;awayProfile?:Profile;
+  modelId?:string|null;reason?:string|null;reasonCode?:string|null;
+  ratingReplayMode?:string|null;ratingSourceIncludedThroughDate?:string|null;
+  homeProfile?:Profile;awayProfile?:Profile;
   factors?:Factor[];headToHead?:Array<{date:string;home:string;away:string;homeScore:number;awayScore:number}>;
   commonOpponents?:Array<{opponent:string;homeResultDate:string;awayResultDate:string;homeMargin:number;awayMargin:number}>};
 type Schedule={schemaVersion:number;generatedAtUtc:string;ratingRetrievedAtUtc:string;
@@ -249,7 +251,7 @@ export default function GameCenter({onOpenAccuracy,onOpenModels,onOpenSelection}
     {selected?.status==="ready"&&selected.homeWinProbability!=null&&
       <div className="v19-game-glance" aria-label="Selected game quick prediction summary">
         <div><small>SELECTED MATCHUP</small><strong>{selected.away} at {selected.home}</strong><span>{when(selected.scheduledStartUtc)}</span></div>
-        <div><small>ORIGINAL PUBLIC WINNER MODEL</small><strong>{selected.homeWinProbability>=.5?selected.home:selected.away} {percent(Math.max(selected.homeWinProbability,1-selected.homeWinProbability))}</strong><span>{selected.model||"Elo"} · {alreadyStarted?"Previously scheduled, not live in-game odds":"Source-frozen matchup at last update"}</span></div>
+        <div><small>ORIGINAL PUBLIC WINNER MODEL</small><strong>{selected.homeWinProbability>=.5?selected.home:selected.away} {percent(Math.max(selected.homeWinProbability,1-selected.homeWinProbability))}</strong><span>{selected.model||"Elo"} · {selected.ratingReplayMode==="prior-date-safe"?"Previous-date replay · ":""}{alreadyStarted?"Previously scheduled, not live in-game odds":"Source-frozen matchup at last update"}</span></div>
         <div><small>RESEARCH MODEL AGREEMENT</small><strong>{availableShadows.length?availableShadows.length-shadowDisagreements+"/"+availableShadows.length+" agree":"Not enough signals"}</strong><span>{shadowDisagreements>0?"Research models disagree on the favorite; see comparison below":"Agreement alone does not prove accuracy"}</span></div>
         <a href="#gc-match-detail">View this game's full breakdown ↓</a>
       </div>}
@@ -327,7 +329,7 @@ export default function GameCenter({onOpenAccuracy,onOpenModels,onOpenSelection}
           <div className="gc-list-header"><strong>{rows.length} GAMES FOUND</strong><span>{schedule.coverage.eligibleForecasts} rated / {schedule.coverage.futureScheduled} future scheduled at capture</span></div>
           <div className="gc-fixtures-scroll">
             {rows.map(g=><button key={g.eventId} type="button" className={"gc-fixture"+(g.eventId===selected?.eventId?" gc-selected":"")} onClick={()=>choose(g.eventId)}>
-              <div className="gc-fixture-top"><span>{when(g.scheduledStartUtc)}</span><span>{g.status==="ready"?"PREDICTION READY":"SOURCE MATCH PENDING"}</span></div>
+              <div className="gc-fixture-top"><span>{when(g.scheduledStartUtc)}</span><span>{g.status==="ready"?"PREDICTION READY":g.reasonCode==="missing-verified-prior-date-replay"?"RATING REPLAY PENDING":"TEAM ID PENDING"}</span></div>
               <div className="gc-fixture-teams"><div><small>AWAY</small><strong>{g.away}</strong></div><span className="gc-at">@</span><div><small>{g.neutralSite?"NEUTRAL":"HOME"}</small><strong>{g.home}</strong></div></div>
               <div className="gc-fixture-bottom"><span>{g.model||"No verified rating match"}</span><b>{g.homeWinProbability==null?"—":percent(Math.max(g.homeWinProbability,1-g.homeWinProbability))+" favorite"}</b></div>
             </button>)}

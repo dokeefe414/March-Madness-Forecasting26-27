@@ -168,6 +168,51 @@ class PregameAuditTests(unittest.TestCase):
         self.assertEqual(neutral["predictions"][0]["model"],"as-of regular-season Elo")
 
 
+    def test_same_day_future_fixture_uses_yesterday_elo_not_this_mornings_result(self):
+        from forecast.live import build_current
+        from forecast.core import matchup_probability
+        past = [{"id":"prev","date":"2026-11-15","home":"Duke",
+                 "away":"North Carolina","homeScore":76,"awayScore":70}]
+        today = {"id":"earlier-today","date":"2026-11-16","home":"North Carolina",
+                 "away":"Duke","homeScore":97,"awayScore":65}
+        source = past + [today]
+        rating = build_current(source, NOW)
+        rating["retrievedAtUtc"] = "2026-11-16T13:00:00Z"
+        board = [{"events":[game("later-today","2026-11-17T01:00:00Z")]}]
+        first = forecast_scheduled(board,rating,NOW,scored_games=source)
+        self.assertEqual(first["coverage"]["unsafeSameDateRatings"],0)
+        pick = first["predictions"][0]
+        earlier = build_current(past,NOW)
+        states = {t["name"]:t for t in earlier["teams"]}
+        expected = matchup_probability(states["Duke"]["rating"],
+                                      states["North Carolina"]["rating"],65)
+        self.assertAlmostEqual(pick["homeWinProbability"],expected,places=6)
+        self.assertEqual(pick["ratingReplayMode"],"prior-date-safe")
+        self.assertEqual(pick["ratingSourceIncludedThroughDate"],"2026-11-15")
+        self.assertEqual(pick["ratingInputs"]["home"]["wins"],1)
+        self.assertEqual(pick["ratingInputs"]["away"]["wins"],0)
+        self.assertIsNone(pick["researchScoreProjection"])
+        # Rewriting today's score cannot alter a strictly prior-date pick.
+        altered = past + [{**today,"homeScore":110,"awayScore":55}]
+        changed = build_current(altered,NOW)
+        changed["retrievedAtUtc"] = rating["retrievedAtUtc"]
+        again = forecast_scheduled(board,changed,NOW,scored_games=altered)
+        self.assertEqual(pick["homeWinProbability"],again["predictions"][0]["homeWinProbability"])
+        # Without the exact scored-game ledger, the old safety guard remains.
+        blocked = forecast_scheduled(board,rating,NOW)
+        self.assertEqual(blocked["coverage"]["unsafeSameDateRatings"],1)
+        self.assertEqual(blocked["rejectionReasons"]["later-today"],"missing-verified-prior-date-replay")
+
+    def test_safe_date_replay_rejects_mismatched_rating_ledger(self):
+        from forecast.live import build_current
+        rows=[{"id":"same-day","date":"2026-11-16","home":"Duke",
+               "away":"North Carolina","homeScore":80,"awayScore":79}]
+        rating=build_current(rows,NOW)
+        rating["retrievedAtUtc"]="2026-11-16T13:00:00Z"
+        with self.assertRaisesRegex(ValueError,"counts differ"):
+            forecast_scheduled([{"events":[game("future","2026-11-17T01:00:00Z")]}],
+                               rating,NOW,scored_games=[])
+
 
 if __name__ == "__main__":
     unittest.main()
