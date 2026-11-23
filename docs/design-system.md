@@ -128,3 +128,8 @@ explicit `aria-label` for the panel, row counts and mobile layouts at
 1100/680/420 px. AP agreement bars are not styled as successful
 probabilistic prediction-validation claims. Scientific definitions:
 [AP comparison contract](ap-poll-weekly.md).
+
+
+## v2.7 Elo Reimagined / three-way evidence studio
+
+The Elo 2.0 challenger is placed **inside existing Model Lab**, ahead of the AP-vs-original-Elo panel, rather than adding a navigation tab. The scoped `.ev2` design preserves the existing mint/blue midnight color language and uses condensed Barlow numerical evidence with conspicuous `ACTIVE PREDICTOR UNCHANGED` messaging. A three-way view switch isolates source-aligned *current ratings*, independently held-out *historical tests* (Brier, accuracy, ECE, bootstrap intervals) and AP vs original-vs-shadow Elo with explicit reconstructed-time caveats. Tables scroll **inside** the card on small devices; no page-wide horizontal overflow. Focus indicators, keyboard-operable button groups, proper table headers and honest missing-source states are required. See [the Elo2 methods guide](elo-v2-research.md).
