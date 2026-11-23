@@ -1965,6 +1965,19 @@
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
+      "away": "Ole Miss",
+      "awayEspnTeamId": "145",
+      "awayScore": 82,
+      "date": "2026-11-23",
+      "eventId": "401918076",
+      "firstObservedAtUtc": "2026-11-23T22:33:58.684807Z",
+      "home": "Clemson",
+      "homeEspnTeamId": "228",
+      "homeScore": 62,
+      "scheduledStartUtc": "2026-11-23T19:30:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
       "away": "William & Mary",
       "awayEspnTeamId": "2729",
       "awayScore": 79,
@@ -3785,6 +3798,19 @@
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
+      "away": "Indiana St.",
+      "awayEspnTeamId": "282",
+      "awayScore": 77,
+      "date": "2026-11-23",
+      "eventId": "401921209",
+      "firstObservedAtUtc": "2026-11-23T22:33:58.684807Z",
+      "home": "East Carolina",
+      "homeEspnTeamId": "151",
+      "homeScore": 76,
+      "scheduledStartUtc": "2026-11-23T17:30:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
       "away": "Hampton",
       "awayEspnTeamId": "2261",
       "awayScore": 56,
@@ -3863,6 +3889,19 @@
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
+      "away": "Tulsa",
+      "awayEspnTeamId": "202",
+      "awayScore": 66,
+      "date": "2026-11-23",
+      "eventId": "401921658",
+      "firstObservedAtUtc": "2026-11-23T22:33:58.684807Z",
+      "home": "Oregon St.",
+      "homeEspnTeamId": "204",
+      "homeScore": 69,
+      "scheduledStartUtc": "2026-11-23T19:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
       "away": "LSU",
       "awayEspnTeamId": "99",
       "awayScore": 81,
@@ -3912,6 +3951,19 @@
       "homeEspnTeamId": "2166",
       "homeScore": 79,
       "scheduledStartUtc": "2026-11-23T16:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
+      "away": "Charlotte",
+      "awayEspnTeamId": "2429",
+      "awayScore": 71,
+      "date": "2026-11-23",
+      "eventId": "401921701",
+      "firstObservedAtUtc": "2026-11-23T22:33:58.684807Z",
+      "home": "FGCU",
+      "homeEspnTeamId": "526",
+      "homeScore": 58,
+      "scheduledStartUtc": "2026-11-23T18:30:00Z",
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
@@ -4523,6 +4575,19 @@
       "homeEspnTeamId": "26",
       "homeScore": 105,
       "scheduledStartUtc": "2026-11-17T03:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
+      "away": "Long Beach St.",
+      "awayEspnTeamId": "299",
+      "awayScore": 75,
+      "date": "2026-11-23",
+      "eventId": "401924266",
+      "firstObservedAtUtc": "2026-11-23T22:33:58.684807Z",
+      "home": "FIU",
+      "homeEspnTeamId": "2229",
+      "homeScore": 79,
+      "scheduledStartUtc": "2026-11-23T18:00:00Z",
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
@@ -5680,6 +5745,19 @@
       "homeEspnTeamId": "2649",
       "homeScore": 83,
       "scheduledStartUtc": "2026-11-20T00:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
+      "away": "Akron",
+      "awayEspnTeamId": "2006",
+      "awayScore": 64,
+      "date": "2026-11-23",
+      "eventId": "401928830",
+      "firstObservedAtUtc": "2026-11-23T22:33:58.684807Z",
+      "home": "Wright St.",
+      "homeEspnTeamId": "2750",
+      "homeScore": 66,
+      "scheduledStartUtc": "2026-11-23T18:30:00Z",
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
