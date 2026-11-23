@@ -5,7 +5,8 @@ import {useEffect,useMemo,useState} from "react";
 const base=process.env.NEXT_PUBLIC_BASE_PATH||"";
 type Scores={games:number;baselineBrier:number|null;challengerBrier:number|null;
   brierGain:number|null;baselineAccuracy:number|null;challengerAccuracy:number|null;
-  baselineLogLoss?:number|null;challengerLogLoss?:number|null};
+  baselineLogLoss?:number|null;challengerLogLoss?:number|null;
+  baselineECE?:number|null;challengerECE?:number|null};
 type Variant=Scores&{earlySeason?:Scores;seasonBlockBrierGain95?:number[]|null;
   positiveGainSeasons?:number};
 type Year={season:number;games:number;priorSeason:number;priorMatchedTeams:number;
@@ -178,6 +179,7 @@ export default function EloV2Comparison(){
                <ComparisonBars baseline={historical?.baselineBrier} challenger={historical?.challengerBrier} label="Full-season Brier"/>
                <div className="ev2-evidence"><span><small>WINNER ACCURACY / ORIGINAL</small><strong>{percentage(historical?.baselineAccuracy)}</strong></span>
                  <span><small>WINNER ACCURACY / CHALLENGER</small><strong>{percentage(historical?.challengerAccuracy)}</strong></span></div>
+               <p>Five-bin calibration ECE (lower is better): <strong>{fmt(historical?.baselineECE)} original</strong> vs. <strong>{fmt(historical?.challengerECE)} challenger</strong>. Read with paired Brier, not by itself.</p>
                <p>Season-block descriptive 95% Brier-gain interval: <strong>{historical?.seasonBlockBrierGain95?.map(v=>fmt(v)).join(" to ")||"not enough seasons"}</strong>. If this spans zero, the evidence does not establish improvement.</p>
              </div>
              <div className="ev2-hist-feature">
