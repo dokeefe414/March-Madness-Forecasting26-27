@@ -37,6 +37,27 @@ class GameCenterTests(unittest.TestCase):
   self.assertEqual(one["awayProfile"]["recentGames"][0]["opponent"],"Wake")
   self.assertEqual(one["commonOpponents"][0]["opponent"],"Wake")
   self.assertEqual(len(one["factors"]),4)
+ def test_same_day_source_has_stable_safe_forecast_and_profile(self):
+  from forecast.live import build_current
+  source=[{"id":"1","date":"2026-11-19","home":"Duke","away":"UNC",
+           "homeScore":74,"awayScore":63},
+          {"id":"2","date":"2026-11-20","home":"UNC","away":"Duke",
+           "homeScore":88,"awayScore":61}]
+  data=build_current(source,NOW)
+  data["retrievedAtUtc"]="2026-11-20T11:50:00Z"
+  for t in data["teams"]:
+   t["espnSourceTeamId"]="150" if t["name"]=="Duke" else "153"
+  board={"events":[event("afternoon","Duke","UNC","150","153",
+                         date="2026-11-20T22:00:00Z")]}
+  report=build_game_center([board],data,source,NOW)
+  self.assertEqual(report["coverage"]["eligibleForecasts"],1)
+  item=report["games"][0]
+  self.assertEqual(item["status"],"ready")
+  self.assertEqual(item["ratingReplayMode"],"prior-date-safe")
+  self.assertEqual(item["homeProfile"]["wins"],1)
+  self.assertEqual(item["homeProfile"]["losses"],0)
+  self.assertEqual(item["awayProfile"]["wins"],0)
+  self.assertEqual(item["awayProfile"]["losses"],1)
  def test_unknown_program_has_no_invented_probability(self):
   board={"events":[event("fixture","Unknown","Duke","999","150")]}
   output=build_game_center([board],RATINGS,GAMES,NOW)

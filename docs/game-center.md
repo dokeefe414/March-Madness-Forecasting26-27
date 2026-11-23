@@ -1,5 +1,33 @@
 # v0.8 — Browse a real game and understand the forecast
 
+## Future fixtures on a date with already-recorded scores (2026-11-23 fix)
+
+Previously the pretipoff recorder and Game Center rejected **every** future
+fixture whose Eastern game date was on or before `ratings.lastGameDate`.
+For busy same-day schedules, this unnecessarily withheld valid predictions.
+
+Both consumers now pass the **exact retrieved, accepted scored-game ledger**
+(`web/public/current/2027-games.json`, with the same `retrievedAtUtc`
+as `2027.json`) to the shared `forecast.snapshot.forecast_scheduled`.
+When a future fixture's date could overlap a scored date, it replays the
+**production bounded-margin game-aware Elo** exclusively on games dated
+**strictly before that fixture date**. Current-day results, form, records,
+and possession figures cannot leak into the forecast. A school without any
+earlier valid game retains the neutral 1500 Elo initialization; it is not
+credited with fictitious games or team efficiency. Experimental score estimates
+abstain in the date-frozen fallback where full-day box data cannot be safely
+reproduced. The served matchup cards show this prior-date replay explicitly
+and reflect the same rating inputs as the archived probability.
+
+The original 15-minute start-time buffer, exact ESPN event IDs, strict
+NCAA↔ESPN identity matching and immutable first-pick record remain unchanged.
+An omitted or mismatched score ledger fails closed; no score is ever
+reconstructed by querying future outcomes. Missing team identities remain
+unpredicted, now with a specific diagnostic rather than a generic label.
+The update adds hermetic tests for day-score leakage, rating/record display
+consistency and source count mismatches.
+
+
 ## A game-first experience
 
 The website opens on **Find a Game** rather than an unrelated research table. The site lists the next **five Eastern calendar days** of ESPN-public scheduled Division I fixtures at build time. Each real event can be selected by tapping its card. Its URL includes `?game=<ESPN event ID>`, making a verified game report directly shareable.

@@ -20,6 +20,22 @@ March Forecast is an open-source NCAA men's basketball forecasting and model-eva
 
 ---
 
+## Same-day prediction coverage fix — November 23, 2026
+
+Upcoming games on a day with an earlier published final no longer disappear
+just because the latest full-day Elo included that result. Both the immutable
+forecast recorder and Game Center now re-evaluate game-aware Elo **strictly on
+previous-date scored games** using a matching source retrieval. The pregame
+probability and displayed team rating/record come from the same safe replay.
+No same-day outcome or possession statistic is used as hindsight; experimental
+score projections may abstain. A missing scored-game ledger fails closed,
+while unmatched school IDs remain explicitly pending. Existing prediction
+snapshots and settlements are never rewritten.
+
+[Coverage/replay contract](docs/game-center.md).
+
+---
+
 ## v2.7 — Elo Reimagined: real prior-year learning, causal schedule strength and held-out evidence
 
 The new **[Elo Reimagined research studio](https://dokeefe414.github.io/March-Madness-Forecasting26-27/?view=models#elo-v2-comparison)** inside Model Lab tests whether the existing 2027 Elo—which starts every team at 1500—would improve with historical initial strengths and stricter schedule context. This is a **research challenger, not a replacement of the active model**.

@@ -91,7 +91,8 @@ def build_game_center(scoreboards:list[dict],ratings:dict,games:list[dict],
     if len(by_team_id)!=len(ratings["teams"]):
         raise ValueError("Duplicated current-season team identity")
     # Reuse the exact probability engine used by Git's immutable pregame ledger.
-    forecast=forecast_scheduled(scoreboards,ratings,now,online_model,state_space,opponent_model,ensemble_model)
+    forecast=forecast_scheduled(scoreboards,ratings,now,online_model,state_space,opponent_model,ensemble_model,
+                                scored_games=games)
     frozen={p["eventId"]:p for p in forecast["predictions"]}
     results={}
     coverage={"futureScheduled":0,"eligibleForecasts":0,"unmatchedOrAmbiguous":0,
@@ -142,17 +143,19 @@ def build_game_center(scoreboards:list[dict],ratings:dict,games:list[dict],
                 a_hist=_evidence(eligible_games,away["name"],included_before)
                 meetings=[g for g in eligible_games if set((g["home"],g["away"])) ==
                           set((home["name"],away["name"]))][-4:]
-                diff=home["rating"]-away["rating"]
+                home_input={**home, **((pick.get("ratingInputs") or {}).get("home") or {})}
+                away_input={**away, **((pick.get("ratingInputs") or {}).get("away") or {})}
+                diff=home_input["rating"]-away_input["rating"]
                 neutral=pick["neutralSite"]
                 factors=[
                     {"title":"Strength gap","value":round(diff,1),
                      "detail":"Home minus away source Elo rating. Both include previous results."},
                     {"title":"Venue adjustment","value":0 if neutral else 65,
                      "detail":"Elo points credited to the scheduled home team; zero at a neutral site."},
-                    {"title":"Recent trend","value":round(home.get("trend",0)-away.get("trend",0),1),
+                    {"title":"Recent trend","value":round(home_input.get("trend",0)-away_input.get("trend",0),1),
                      "detail":"Difference in bounded recent Elo adjustments; informs the logistic challenger only."},
-                    {"title":"Opponent quality","value":round((home.get("opponentAverageElo") or 1500)-
-                                            (away.get("opponentAverageElo") or 1500),1),
+                    {"title":"Opponent quality","value":round((home_input.get("opponentAverageElo") or 1500)-
+                                            (away_input.get("opponentAverageElo") or 1500),1),
                      "detail":"Descriptive difference in average opponents' current Elo; not a separate model coefficient."}
                 ]
                 if opponent_model is not None:
@@ -178,9 +181,11 @@ def build_game_center(scoreboards:list[dict],ratings:dict,games:list[dict],
                       "ensembleResearchWeight":pick.get("ensembleResearchWeight"),
                       "ensembleComponentCount":pick.get("ensembleComponentCount"),
                       "model":pick["model"],"modelId":pick.get("modelId"),
+                      "ratingReplayMode":pick.get("ratingReplayMode"),
+                      "ratingSourceIncludedThroughDate":pick.get("ratingSourceIncludedThroughDate"),
                       "status":"ready","reason":None,
-                      "homeProfile":_team_detail(home,h_hist),
-                      "awayProfile":_team_detail(away,a_hist),
+                      "homeProfile":_team_detail(home_input,h_hist),
+                      "awayProfile":_team_detail(away_input,a_hist),
                       "factors":factors,
                       "headToHead":[{"date":g["date"],"home":g["home"],"away":g["away"],
                                      "homeScore":g["homeScore"],"awayScore":g["awayScore"]} for g in reversed(meetings)],
@@ -193,11 +198,15 @@ def build_game_center(scoreboards:list[dict],ratings:dict,games:list[dict],
                       }}
             else:
                 coverage["unmatchedOrAmbiguous"]+=1
+                reason_code=forecast.get("rejectionReasons",{}).get(eid,"unverified-team-identity")
+                reason=("A safe prior-date Elo replay was unavailable. This game stays pending rather than using same-day outcomes."
+                        if reason_code=="missing-verified-prior-date-replay" else
+                        "One or both ESPN schools could not be linked to a uniquely source-verified NCAA rated team; an identity guess would make the forecast unreliable.")
                 item={"eventId":eid,"scheduledStartUtc":starts.isoformat().replace("+00:00","Z"),
                       "scheduledEasternDate":edate,"neutralSite":bool(competitions[0].get("neutralSite")),
                       "home":label(side_h[0]),"away":label(side_a[0]),
                       "homeWinProbability":None,"status":"unmatched",
-                      "reason":"ESPN fixture exists, but NCAA↔ESPN team identity or pregame source requirements were not verified. No odds are invented."}
+                      "reasonCode":reason_code,"reason":reason}
             results[eid]=item
     return {"schemaVersion":1,"season":2027,"type":"verified-future-fixtures",
             "generatedAtUtc":now.isoformat().replace("+00:00","Z"),
