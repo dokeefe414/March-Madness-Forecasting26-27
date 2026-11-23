@@ -3902,6 +3902,19 @@
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
+      "away": "UNI",
+      "awayEspnTeamId": "2460",
+      "awayScore": 48,
+      "date": "2026-11-23",
+      "eventId": "401921700",
+      "firstObservedAtUtc": "2026-11-23T19:10:28.940751Z",
+      "home": "Davidson",
+      "homeEspnTeamId": "2166",
+      "homeScore": 79,
+      "scheduledStartUtc": "2026-11-23T16:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
       "away": "Wyoming",
       "awayEspnTeamId": "2751",
       "awayScore": 79,
@@ -5524,6 +5537,19 @@
       "homeEspnTeamId": "257",
       "homeScore": 68,
       "scheduledStartUtc": "2026-11-21T00:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
+      "away": "St. Bonaventure",
+      "awayEspnTeamId": "179",
+      "awayScore": 71,
+      "date": "2026-11-23",
+      "eventId": "401927397",
+      "firstObservedAtUtc": "2026-11-23T19:10:28.940751Z",
+      "home": "App State",
+      "homeEspnTeamId": "2026",
+      "homeScore": 65,
+      "scheduledStartUtc": "2026-11-23T16:00:00Z",
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
