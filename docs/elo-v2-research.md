@@ -96,7 +96,7 @@ A positive Brier gain means \(\mathrm{Brier}_{control}-\mathrm{Brier}_{challenge
 
 ## 2027 operational data and the three-way AP study
 
-`research/forecast/elo_v2_current.py` builds a **shadow** challenger from the same, deduplicated, source-accepted games as the live website. It verifies `2027-games.json.retrievedAtUtc\) and `2027.json.retrievedAtUtc\) match before doing any work. Replays current-season games under the three hypotheses; publishes exact D-I source-ID cohort ranks for both current and shadow Elo. It exposes how many **exact-name** provisional 2026 priors matched, how many were missing, and explicitly blocks model promotion.
+`research/forecast/elo_v2_current.py` builds a **shadow** challenger from the same, deduplicated, source-accepted games as the live website. It verifies that `2027-games.json.retrievedAtUtc` and `2027.json.retrievedAtUtc` match before doing any work. Replays current-season games under the three hypotheses; publishes exact D-I source-ID cohort ranks for both current and shadow Elo. It exposes how many **exact-name** provisional 2026 priors matched, how many were missing, and explicitly blocks model promotion.
 
 For each already **archived** AP poll edition, it also reconstructs the shadow model using only games through the **Sunday before the AP source week**, with team identities still sourced from the current verified 2027 ESPN-ID membership. It contrasts the **first-frozen** original Elo/AP Top 25 overlap and the *reconstructed* Elo2/AP overlap on a common AP edition. It flags that previously played game scores could have been backfilled after the original AP publication. This is not claimed to be frozen at the historic poll instant. Neither AP ranking nor its difference trains or promotes a model.
 
