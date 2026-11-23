@@ -129,3 +129,8 @@ the prior history intact and cannot block game scores or first picks.
 Model Lab shows AP-versus-Elo overlap, gap, correlation, outsiders and
 the weekly trend. These are rank-agreement diagnostics only, never
 prospective forecast accuracy. See [AP comparison research runbook](ap-poll-weekly.md).
+
+
+## v2.7 Elo 2.0 research replay (unchanged live pick schedule)
+
+The Pages workflow now runs two additional **non-operational** steps after the existing source audits: `forecast.elo_v2_historical` downloads the SHA-pinned Kaggle men's compact regular-season games and constructs **2016–2025 fixed-policy same-match heldout evidence**, then `forecast.elo_v2_current` compares source-accepted current-season results with a carryover-plus-prior-opponent-adjusted shadow rating and stored AP editions. The historical step writes `web/public/research/elo-v2-historical.json`; the current shadow report writes `web/public/current/elo-v2-research.json`. If the pinned historical raw source cannot be reached, the report must be explicitly unavailable, not a fabricated historical gain. Neither script mutates first-pick forecasts or invokes promotion. The current 2026 historical prior is only through Kaggle day 118 and name-joined, **not independently ID-verified**. A future model switch requires independent prior-year coverage plus paired prospectively issued forecasts—not merely AP rank agreement. See [the research runbook](elo-v2-research.md).
