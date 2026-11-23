@@ -186,6 +186,8 @@ def paired_metrics(control:list[dict],challenger:list[dict],
     if len(a)!=len(control) or len(b)!=len(challenger) or set(a)!=set(b):
         raise ValueError("Different or duplicate game cohorts for comparison")
     diffs=[];acc_a=acc_b=0;cal_a=[];cal_b=[]
+    bins_a=[[0,0.0,0.0] for _ in range(5)]
+    bins_b=[[0,0.0,0.0] for _ in range(5)]
     for ident in sorted(a):
         x,y=a[ident],b[ident]
         if (x["dayNum"]!=y["dayNum"] or x["winnerId"]!=y["winnerId"]
@@ -199,6 +201,15 @@ def paired_metrics(control:list[dict],challenger:list[dict],
         acc_b+=1 if pb>.5 else .5 if pb==.5 else 0
         cal_a.append(-math.log(max(pa,1e-12)))
         cal_b.append(-math.log(max(pb,1e-12)))
+        # Orientation by immutable numeric ID, not hindsight winner side:
+        # 5 reliability bins for P(first team ID wins) versus that outcome.
+        first_won=1.0 if x["winnerId"]<x["loserId"] else 0.0
+        for prob,bins in ((pa,bins_a),(pb,bins_b)):
+            p_first=prob if first_won else 1-prob
+            index=min(4,int(p_first*5))
+            bins[index][0]+=1
+            bins[index][1]+=p_first
+            bins[index][2]+=first_won
     n=len(diffs)
     if not n:
         return {"games":0,"baselineBrier":None,"challengerBrier":None,
@@ -206,7 +217,14 @@ def paired_metrics(control:list[dict],challenger:list[dict],
                 "baselineLogLoss":None,"challengerLogLoss":None}
     left=sum(x for x,_,_ in diffs)/n
     right=sum(y for _,y,_ in diffs)/n
+    def ece(bins:list[list[float]])->float:
+        return sum(abs(p/c-y/c)*c for c,p,y in bins if c)/n
     return {"games":n,
+            "calibrationBinPolicy":"Five equal-width bins, first team numerical ID orientation, no label leakage",
+            "baselineCalibrationBins":bins_a,
+            "challengerCalibrationBins":bins_b,
+            "baselineECE":round(ece(bins_a),6),
+            "challengerECE":round(ece(bins_b),6),
             "baselineBrier":round(left,6),
             "challengerBrier":round(right,6),
             "brierGain":round(left-right,6),
