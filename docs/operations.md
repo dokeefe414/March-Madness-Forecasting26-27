@@ -194,3 +194,8 @@ existing daily jobs, which retry if AP is delayed. The site reads the
 committed JSON under Model Lab; a missing poll is visibly pending.
 First-pick win/loss grading is completely separate; see
 [weekly AP method and controls](ap-poll-weekly.md).
+
+
+## Elo 2.0 nonoperational Page-build experiment
+
+Pages now publishes an entirely separate Elo 2.0 *research* report after the existing live source-aware Elo step, but **before** downstream challenger training. Its pinned historical 2016–2025 evaluation uses same-date fixed-policy control/challenger game streams, true previous-season team-ID carryover and strictly causal prior opponent ratings. The provisional 2027 study uses a **partial 2026 source** and exact-name links only, so automatic model replacement is prohibited. If the external pinned historical raw file is offline, the report must say unavailable; daily live game updates and first-pick grading stay independent. Audit the `elo-v2-historical.json.status` and `elo-v2-research.json.ratingRetrievedAtUtc` source-match before interpreting its Model Lab display. [Complete methodology](elo-v2-research.md).

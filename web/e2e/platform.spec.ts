@@ -841,3 +841,110 @@ test("weekly AP study fails gracefully when no source poll has been captured yet
   await expect(panel).toContainText("First weekly comparison pending");
   await expect(panel.locator(".ap-lab-table tbody tr")).toHaveCount(0);
 });
+
+
+test("v2.7 Elo2 displays source-aligned three-way ranks and honest held-out evidence",async ({page})=>{
+  const json=(d:unknown)=>({contentType:"application/json",body:JSON.stringify(d)});
+  const sourceAt="2026-11-23T14:30:00Z";
+  const entries=Array.from({length:28},(_,i)=>({
+    name:"School "+(i+1),teamId:"ncaa-"+i,espnTeamId:String(800+i),
+    elo2:1570-i*2,elo2Rank:i+1,baselineElo:1540-i,
+    baselineRank:28-i,rankChangeFromBaseline:27-2*i,
+    offseasonPrior:i%2?1500:1550,hasHistoricalMatch:i%2===0,
+    opponentScheduleBonus:3.1,games:6,
+  }));
+  const scores=(gain:number)=>({
+    games:800,baselineBrier:.232,challengerBrier:.232-gain,
+    brierGain:gain,baselineAccuracy:.57,challengerAccuracy:.59,
+    baselineECE:.087,challengerECE:.07,
+    baselineLogLoss:.665,challengerLogLoss:.64,
+  });
+  const bySeason=[2019,2020,2021,2022,2023,2024,2025].map(season=>({
+    season,games:900,priorSeason:season-1,priorMatchedTeams:340,
+    variants:{carryover:scores(.004),scheduleOnly:scores(-.001),carryoverAndSchedule:scores(.006)},
+  }));
+  await page.route("**/research/elo-v2-historical.json",r=>r.fulfill(json({
+    schemaVersion:1,type:"elo-v2-historical-year-holdout",status:"ready",
+    holdoutSeasons:7,firstHeldOutYear:2019,lastHeldOutYear:2025,
+    variants:{
+      carryover:{...scores(.004),earlySeason:scores(.008),
+        seasonBlockBrierGain95:[-.002,.011],positiveGainSeasons:5},
+      scheduleOnly:{...scores(-.001),earlySeason:scores(0),
+        seasonBlockBrierGain95:[-.01,.008],positiveGainSeasons:3},
+      carryoverAndSchedule:{...scores(.006),earlySeason:scores(.01),
+        seasonBlockBrierGain95:[.001,.012],positiveGainSeasons:6},
+    },
+    bySeason,
+  })));
+  await page.route("**/current/elo-v2-research.json",r=>r.fulfill(json({
+    schemaVersion:1,type:"current-elo2-research",season:2027,status:"research-only",
+    ratingRetrievedAtUtc:sourceAt,sourceGameDate:"2026-11-22",sourceGames:1250,
+    historicalBenchmarkStatus:"ready",historicalHoldoutSeasons:7,
+    modelPromotionAllowed:false,
+    promotionReason:"2026 prior is incomplete; exact name matching is research only.",
+    priorCoverage:{matchedTeamNames:28,unmatchedTeamNames:0,
+      snapshotSeason:2026,snapshotThroughKaggleDay:118,
+      identityWarning:"Names alone do not verify team identity."},
+    currentRetrospective:{carryover:scores(.004),scheduleOnly:scores(-.001),carryoverAndSchedule:scores(.006)},
+    teams:entries,
+    apComparisons:[{
+      pollKey:"AP-2027-2026-11-16",sourceWeekStart:"2026-11-16",
+      eloGameCutoffDate:"2026-11-15",status:"retrospective-comparable",
+      apMatchedElo2:25,baselineTop25OverlapFrozen:7,elo2Top25Overlap:12,
+      baselineTop10OverlapFrozen:1,elo2Top10Overlap:5,
+      teams:entries.slice(0,25).map((t,i)=>({apRank:i+1,
+        apTeam:t.name,baselineEloRankFrozen:t.baselineRank,
+        elo2Rank:t.elo2Rank,elo2:t.elo2,rankGap:i-1})),
+      warning:"Retrospectively reconstructed today. Original week is frozen.",
+    }],
+  })));
+  await page.route("**/current/2027.json",r=>r.fulfill(json({
+    mode:"current",season:2027,retrievedAtUtc:sourceAt,
+    lastGameDate:"2026-11-22",teams:entries.map(t=>({
+      teamId:t.teamId,name:t.name,rating:t.baselineElo,
+      rank:t.baselineRank,wins:3,losses:3,
+    })),
+  })));
+  await page.goto("/?view=models");
+  const studio=page.getByRole("region",{name:"Original Elo versus Elo 2.0 research comparison"});
+  await expect(studio).toBeVisible();
+  await expect(studio).toContainText("ACTIVE PREDICTOR");
+  await expect(studio).toContainText("UNCHANGED");
+  await expect(studio.locator(".ev2-table tbody tr")).toHaveCount(25);
+  await studio.getByRole("button",{name:"Biggest movers"}).click();
+  await expect(studio.locator(".ev2-table tbody tr")).toHaveCount(28);
+  await studio.getByRole("button",{name:"HISTORICAL TESTS"}).click();
+  await expect(studio).toContainText("Season-block descriptive 95%");
+  await expect(studio).toContainText("calibration ECE");
+  await studio.getByLabel("Choose Elo 2.0 historical variant").selectOption("scheduleOnly");
+  await expect(studio).toContainText("Schedule-adjusted");
+  await studio.getByRole("button",{name:"ELO 2.0 vs AP"}).click();
+  await expect(studio).toContainText("12");
+  await expect(studio).toContainText("Retrospectively reconstructed today");
+  await expect(studio.locator(".ev2-table tbody tr")).toHaveCount(25);
+  const size=await page.evaluate(()=>({
+    actual:document.documentElement.scrollWidth,
+    viewport:document.documentElement.clientWidth,
+  }));
+  expect(size.actual,"Elo2 source-comparison leaked horizontal overflow").toBeLessThanOrEqual(size.viewport+3);
+});
+
+test("v2.7 Elo2 refuses mismatched research timestamps instead of misleading ratings",async ({page})=>{
+  const json=(d:unknown)=>({contentType:"application/json",body:JSON.stringify(d)});
+  await page.route("**/research/elo-v2-historical.json",r=>r.fulfill(json({
+    schemaVersion:1,type:"elo-v2-historical-year-holdout",
+    status:"unavailable",holdoutSeasons:0,variants:{},bySeason:[],
+  })));
+  await page.route("**/current/elo-v2-research.json",r=>r.fulfill(json({
+    schemaVersion:1,type:"current-elo2-research",season:2027,
+    status:"research-only",ratingRetrievedAtUtc:"2026-11-21T02:00:00Z",
+    teams:[],apComparisons:[],
+  })));
+  await page.route("**/current/2027.json",r=>r.fulfill(json({
+    retrievedAtUtc:"2026-11-23T14:00:00Z",season:2027,mode:"current",teams:[],
+  })));
+  await page.goto("/?view=models");
+  const studio=page.getByRole("region",{name:"Original Elo versus Elo 2.0 research comparison"});
+  await expect(studio).toContainText("different retrieval timestamps");
+  await expect(studio.locator(".ev2-table tbody tr")).toHaveCount(0);
+});

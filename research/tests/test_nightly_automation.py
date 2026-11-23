@@ -68,6 +68,24 @@ class NightlyAutomationContract(unittest.TestCase):
         self.assertIn('workflows: ["Archive real pre-tipoff forecasts"]', deploy)
         self.assertIn("github.event.workflow_run.conclusion == 'success'", deploy)
 
+    def test_elo2_is_research_only_and_does_not_modify_operational_elo(self):
+        deploy=(WORKFLOWS/"deploy-pages.yml").read_text(encoding="utf-8")
+        archive=(WORKFLOWS/"archive-pregame.yml").read_text(encoding="utf-8")
+        self.assertIn("python -m forecast.elo_v2_historical",deploy)
+        self.assertIn("python -m forecast.elo_v2_current",deploy)
+        self.assertIn("web/public/research/elo-v2-historical.json",deploy)
+        self.assertIn("web/public/current/elo-v2-research.json",deploy)
+        self.assertLess(deploy.index("python -m forecast.elo_v2_historical"),
+                        deploy.index("python -m forecast.live"))
+        self.assertLess(deploy.index("python -m forecast.live"),
+                        deploy.index("python -m forecast.elo_v2_current"))
+        self.assertLess(deploy.index("python -m forecast.elo_v2_current"),
+                        deploy.index("python -m forecast.retrain"))
+        self.assertIn("python -m forecast.live",archive)
+        self.assertNotIn("forecast.elo_v2_current",archive)
+        self.assertNotIn("forecast.elo_v2_historical",archive)
+        self.assertIn("python -m forecast.snapshot",archive)
+
     def test_morning_monitor_catches_missing_overnight_settlement(self):
         monitor = (WORKFLOWS / "monitor-archive.yml").read_text(encoding="utf-8")
         self.assertEqual(schedules("monitor-archive.yml"),
