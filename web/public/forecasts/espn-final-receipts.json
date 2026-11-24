@@ -5930,6 +5930,19 @@
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
+      "away": "Wright St.",
+      "awayEspnTeamId": "2750",
+      "awayScore": 70,
+      "date": "2026-11-24",
+      "eventId": "401927398",
+      "firstObservedAtUtc": "2026-11-24T18:49:04.991347Z",
+      "home": "St. Bonaventure",
+      "homeEspnTeamId": "179",
+      "homeScore": 72,
+      "scheduledStartUtc": "2026-11-24T15:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
       "away": "Mercer",
       "awayEspnTeamId": "2382",
       "awayScore": 84,
@@ -6005,6 +6018,19 @@
       "homeEspnTeamId": "166",
       "homeScore": 79,
       "scheduledStartUtc": "2026-11-22T19:30:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
+      "away": "Ohio",
+      "awayEspnTeamId": "195",
+      "awayScore": 69,
+      "date": "2026-11-24",
+      "eventId": "401928791",
+      "firstObservedAtUtc": "2026-11-24T18:49:04.991347Z",
+      "home": "New Mexico St.",
+      "homeEspnTeamId": "166",
+      "homeScore": 68,
+      "scheduledStartUtc": "2026-11-24T16:00:00Z",
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
