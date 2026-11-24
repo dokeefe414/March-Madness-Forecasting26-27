@@ -678,6 +678,19 @@
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
+      "away": "Colorado St.",
+      "awayEspnTeamId": "36",
+      "awayScore": 83,
+      "date": "2026-11-23",
+      "eventId": "401909743",
+      "firstObservedAtUtc": "2026-11-24T13:32:56.329997Z",
+      "home": "Arizona",
+      "homeEspnTeamId": "12",
+      "homeScore": 96,
+      "scheduledStartUtc": "2026-11-24T04:55:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
       "away": "Jackson St.",
       "awayEspnTeamId": "2296",
       "awayScore": 55,
@@ -4159,6 +4172,19 @@
       "homeEspnTeamId": "2547",
       "homeScore": 76,
       "scheduledStartUtc": "2026-11-24T02:30:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
+      "away": "San Jose St.",
+      "awayEspnTeamId": "23",
+      "awayScore": 88,
+      "date": "2026-11-23",
+      "eventId": "401921664",
+      "firstObservedAtUtc": "2026-11-24T13:32:56.329997Z",
+      "home": "UC San Diego",
+      "homeEspnTeamId": "28",
+      "homeScore": 79,
+      "scheduledStartUtc": "2026-11-24T04:59:00Z",
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
