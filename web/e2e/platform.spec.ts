@@ -213,6 +213,12 @@ test("v1.2 team intelligence deep links and game evidence page exist",async ({pa
    season:2027,retrievedAtUtc,games:[{id:"game-1",date:"2026-11-16",home:"Duke",away:"North Carolina",homeScore:78,awayScore:72}]})}));
  await page.route("**/current/upcoming.json",route=>route.fulfill({contentType:"application/json",body:JSON.stringify({
    games:[{eventId:"next-1",homeTeamId:"ncaa-duke",awayTeamId:"ncaa-unc",home:"Duke",away:"North Carolina",scheduledStartUtc:new Date(Date.now()+3*86400000).toISOString(),homeWinProbability:.6}]})}));
+ await page.route("**/current/elo-v3-teams.json",route=>route.fulfill({contentType:"application/json",body:JSON.stringify({
+   schemaVersion:1,season:2027,model:"elo3",retrievedAtUtc,
+   teams:[{teamId:"ncaa-duke",name:"Duke",rank:1,rating:1565,boxGames:2},
+          {teamId:"ncaa-unc",name:"North Carolina",rank:2,rating:1502,boxGames:2}],
+   pairedBoxes:1,limitations:[]
+ })}));
  await page.goto("/?view=teams");
  await expect(page.locator('main[data-hydrated="yes"]')).toBeVisible();
  await expect(page.getByRole("heading",{name:/TEAM INTELLIGENCE/i})).toBeVisible();
