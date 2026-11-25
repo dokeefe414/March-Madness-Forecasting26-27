@@ -14,6 +14,13 @@ statistics; these cannot be retroactively invented. 2027 prior ratings remain
 neutral until the modern source IDs can be matched to earlier years with
 independent longitudinal identity evidence. No automatic predictor promotion.
 
+**Verified historical comparison:** eight complete held-out seasons,
+43,827 paired scores. Elo 2.0 Brier **0.192457**, Elo 3.0 one-year **0.191266**,
+three-year **0.191155**; however winner classification accuracy **fell**
+from 71.61% to 70.92% / 70.90%. Improved Brier and calibration do **not**
+mean every metric improved, and verified box/Four-Factor accuracy is still a
+separate current-source question.
+
 [Methodology and reproducible tests](docs/elo-v3-audit-and-benchmark.md).
 Live artifact: `current/elo-v3-teams.json`. Benchmark artifact:
 `research/elo-v3-historical.json`.

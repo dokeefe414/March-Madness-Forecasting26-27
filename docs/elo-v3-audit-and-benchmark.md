@@ -46,6 +46,37 @@ Measure Brier score, log loss, accuracy, ECE/calibration bins, early season thro
 
 The historical compact results source has **no paired box scores**. As a result this historical benchmark measures Elo 3.0's score-only + schedule + history configuration, *not* its live verified efficiency/Four Factors contribution. A future independent possession-rich historical corpus would be needed to test that part. No trained player/roster or AP-poll features are added without a validated source.
 
+## Verified pinned-data results (CI, November 25, 2026)
+
+The end-to-end historical benchmark ran against pinned raw-data SHA256
+`79b15ea3016c7887f1031c31a47b68494d5c08d4ba745ad1954a7af0ca3542b4`.
+
+**Eight** of the ten predeclared holdout years had the required complete
+regular-season coverage: 2016, 2017, 2018, 2019, 2022, 2023, 2024, 2025.
+The 2020 and 2021 source seasons did not meet the minimum regular-season-day
+gate and were omitted instead of treated as complete. There were **43,827
+identical scored-game predictions** in each model's paired cohort.
+
+| Retrospective measure | Elo 2.0 | Elo 3.0 (1-year) | Elo 3.0 (3-year) |
+| --- | ---: | ---: | ---: |
+| Brier (lower better) | 0.192457 | 0.191266 | 0.191155 |
+| Log loss (lower better) | 0.569204 | 0.564503 | 0.564406 |
+| Accuracy (higher better) | 71.6122% | 70.9209% | 70.8981% |
+| 10-bin ECE (lower better) | 0.068243 | 0.031350 | 0.032841 |
+
+The paired Brier improvement was **+0.001191** for one-year Elo 3.0
+(season-block descriptive 95% interval **[+0.000977, +0.001380]**)
+and **+0.001302** for multi-year Elo 3.0
+(**[+0.000970, +0.001603]**). All eight eligible seasons showed a positive
+Brier gain; in the first 45 days, one-year Elo 3.0 Brier was 0.182921
+versus Elo 2.0's 0.186561.
+
+**Critical tradeoff:** winner classification accuracy was **lower** for both
+Elo 3.0 variants even though probability calibration, Brier score and log
+loss improved. This is not unqualified superiority, and season-block
+intervals do not account for selection/tuning on these same historical
+periods. Production publication and first-pick models remain unchanged.
+
 ## Current-season paired score-and-box shadow test
 
 The Elo 3.0 team artifact also reports `currentRetrospective`, a match of
