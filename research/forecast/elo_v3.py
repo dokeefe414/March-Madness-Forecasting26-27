@@ -83,8 +83,44 @@ def _four_factor_residual(box, other):
     return clamp((efg - .50) - (tov - .18) + .20 * (orb - .30) + .10 * (ftr - .30), .5)
 
 
-def replay(games, priors=None, paired_boxes=None):
-    """Strict previous-date forecast with end-of-season component breakdown."""
+def _extended_box_residual(box, opponent):
+    """A bounded predeclared exploratory residual from additional actual box totals.
+
+    Every input is an observed count from one finished game. It is never
+    estimated, cross-source-imputed, or exposed to the game's own prediction.
+    These contributions are NOT part of the live model.
+    """
+    f = box.get("factors")
+    x = box.get("extras")
+    other = opponent.get("factors")
+    if not isinstance(f, dict) or not isinstance(x, dict) or not isinstance(other, dict):
+        return None
+    for key, maximum in (("fg3a", 75.), ("ftm", 75.), ("ast", 65.),
+                         ("stl", 40.), ("blk", 30.), ("pf", 65.)):
+        v = x.get(key)
+        if type(v) not in (int,float) or not math.isfinite(v) or not 0 <= v <= maximum:
+            raise ValueError("Invalid historical supplementary box totals")
+    if (x["fg3a"] < f["fg3m"] or x["fg3a"] > f["fga"]
+            or x["ftm"] > f["fta"] or x["ast"] > f["fgm"]+3):
+        raise ValueError("Inconsistent historical supplementary box totals")
+    assist = x["ast"] / max(1., f["fgm"])
+    three = x["fg3a"] and (f["fg3m"] / x["fg3a"] - .34) or 0.
+    free = f["fta"] and (x["ftm"] / f["fta"] - .73) or 0.
+    steal = x["stl"] / box["poss"]
+    block = x["blk"] / max(1., other["fga"])
+    foul = x["pf"] / box["poss"]
+    # Fixed, deliberately small coefficients. Validate out-of-time before
+    # considering promotion; these features substantially overlap efficiency.
+    return clamp(.15*(assist-.55) + .08*three + .07*free
+                 + .20*(steal-.095) + .15*(block-.07)
+                 - .10*(foul-.25), .3)
+
+
+def replay(games, priors=None, paired_boxes=None, stats_variant="fourFactors"):
+    """Date-frozen prediction; explicit independent box-stat ablation policies."""
+    if stats_variant not in ("scoreOnly", "efficiency", "fourFactors", "extended"):
+        raise ValueError("Unknown Elo 3 historical box-stat experiment")
+
     games = sorted(games, key=lambda g: (g.day_num, min(g.winner, g.loser),
                     max(g.winner, g.loser), g.contest_id))
     if not games:
@@ -107,6 +143,7 @@ def replay(games, priors=None, paired_boxes=None):
     off, defence, poss = defaultdict(float), defaultdict(float), defaultdict(float)
     boxcount = defaultdict(int)
     factor_sum, factor_count = defaultdict(float), defaultdict(int)
+    extended_sum, extended_count = defaultdict(float), defaultdict(int)
     home, history, rows, matched, eligible = 65., [], [], 0, 0
     participants = set()
 
@@ -119,23 +156,29 @@ def replay(games, priors=None, paired_boxes=None):
         recent = clamp(form[team] * n / (n + 12.), FORM_CAP)
         efficiency = 0.
         factors = 0.
-        if boxcount[team] >= 3:
+        if stats_variant != "scoreOnly" and boxcount[team] >= 3:
             # Possession-shrunk net efficiency against verified paired box data.
             efficiency = clamp(2. * (off[team] - defence[team]) /
                                (poss[team] + 500.) * 100., EFFICIENCY_CAP)
-        if factor_count[team] >= 3:
+        if stats_variant in ("fourFactors", "extended") and factor_count[team] >= 3:
             factors = clamp(25. * factor_sum[team] /
                             (factor_count[team] + 8.), FACTOR_CAP)
-        return {"rawElo": round(ratings[team], 4),
+        extended = 0.
+        if stats_variant == "extended" and extended_count[team] >= 3:
+            extended = clamp(75. * extended_sum[team] /
+                             (extended_count[team] + 8.), 8.)
+        return {"extended": round(extended, 4),
+                "rawElo": round(ratings[team], 4),
                 "prior": round(initial_rating, 4),
                 "reliability": round(reliability, 5),
                 "reliableElo": round(base, 4),
                 "sos": round(sos, 4), "form": round(recent, 4),
                 "efficiency": round(efficiency, 4),
                 "fourFactors": round(factors, 4),
-                "power": round(base + sos + recent + efficiency + factors, 4),
+                "power": round(base + sos + recent + efficiency + factors + extended, 4),
                 "games": n, "boxGames": boxcount[team],
-                "fourFactorGames": factor_count[team]}
+                "fourFactorGames": factor_count[team],
+                "extendedGames": extended_count[team]}
 
     for day, group in groupby(games, key=lambda g: g.day_num):
         batch = list(group)
@@ -168,7 +211,11 @@ def replay(games, priors=None, paired_boxes=None):
                          "elo3": p if y else 1 - p,
                          "uncalibrated": raw if y else 1 - raw,
                          "temperature": temp,
-                         "boxUsed": boxcount[w] >= 3 and boxcount[l] >= 3})
+                         "boxUsed": stats_variant != "scoreOnly" and boxcount[w] >= 3 and boxcount[l] >= 3,
+                         "fourFactorsUsed": stats_variant in ("fourFactors","extended") and
+                         factor_count[w] >= 3 and factor_count[l] >= 3,
+                         "extendedUsed": stats_variant == "extended" and
+                         extended_count[w] >= 3 and extended_count[l] >= 3})
             k = 24. * margin_multiplier(g.winner_score - g.loser_score) / (
                 1. + max(0., before_w - before_l) / 1800.)
             k *= .65 + .35 * min(counts[w], counts[l]) / (min(counts[w], counts[l]) + 6.)
@@ -213,6 +260,11 @@ def replay(games, priors=None, paired_boxes=None):
                     if residual is not None:
                         factor_sum[team] += residual
                         factor_count[team] += 1
+                    if stats_variant == "extended":
+                        extra = _extended_box_residual(b, opponent)
+                        if extra is not None:
+                            extended_sum[team] += extra
+                            extended_count[team] += 1
                 matched += 1
         for g, gap, raw, delta, before_w, before_l in frozen:
             y = 1. if g.winner < g.loser else 0.
@@ -225,7 +277,8 @@ def replay(games, priors=None, paired_boxes=None):
             "powerRatings": {t: v["power"] for t, v in components.items()},
             "ratingComponents": components, "gamesPlayed": dict(counts),
             "recentForm": dict(form), "boxGames": dict(boxcount),
-            "fourFactorGames": dict(factor_count)}
+            "fourFactorGames": dict(factor_count),
+            "extendedGames": dict(extended_count)}
 
 
 def historical_priors(grouped, year, current_ids, lag_count=3):
