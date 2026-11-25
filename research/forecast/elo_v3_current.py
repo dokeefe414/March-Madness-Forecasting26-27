@@ -25,7 +25,9 @@ def build(games,ratings,boxes):
         key=str(item["id"])
         g=lookup.get(key)
         if g is None:raise ValueError("Unmatched paired box contest")
-        home_won=g.winner_location=="H"
+        home_won=(names[g.winner]==item["home"])
+        if names[g.winner] not in (item["home"],item["away"]) or names[g.loser] not in (item["home"],item["away"]):
+            raise ValueError("Paired box school identity mismatch")
         winner=item["homeBox"] if home_won else item["awayBox"]
         loser=item["awayBox"] if home_won else item["homeBox"]
         pairs[key]={"winnerId":g.winner,"loserId":g.loser,"dayNum":g.day_num,
