@@ -13,6 +13,7 @@ function Trend({values}:{values:number[]}){
 }
 export default function TeamIntelligence(){
  const [data,setData]=useState<RatingsDataset|null>(null);
+ const [elo3,setElo3]=useState<{retrievedAtUtc:string;teams:Array<{teamId:string;rating:number;rank:number;boxGames:number}>;pairedBoxes:number;limitations:string[]}|null>(null);
  const [games,setGames]=useState<Game[]>([]);
  const [fixtures,setFixtures]=useState<Fixture[]>([]);
  const [error,setError]=useState("");
@@ -22,13 +23,15 @@ export default function TeamIntelligence(){
  useEffect(()=>{let alive=true;Promise.all([
    fetch(base+"/current/2027.json").then(r=>{if(!r.ok)throw Error("Current ratings unavailable");return r.json()}),
    fetch(base+"/current/2027-games.json").then(r=>{if(!r.ok)throw Error("Current games unavailable");return r.json()}),
-   fetch(base+"/current/upcoming.json").then(r=>{if(!r.ok)throw Error("Schedule unavailable");return r.json()})
- ]).then(([r,g,f])=>{if(!alive)return;if(r.season!==2027||r.mode!=="current"||!Array.isArray(r.teams)||!Array.isArray(g.games)||!Array.isArray(f.games))throw Error("Source contracts mismatched");
-    setData(r);setGames(g.games);setFixtures(f.games);
+   fetch(base+"/current/upcoming.json").then(r=>{if(!r.ok)throw Error("Schedule unavailable");return r.json()}),
+   fetch(base+"/current/elo-v3-teams.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw Error("Elo 3.0 team ratings unavailable");return r.json()})
+ ]).then(([r,g,f,v3])=>{if(!alive)return;if(r.season!==2027||r.mode!=="current"||!Array.isArray(r.teams)||!Array.isArray(g.games)||!Array.isArray(f.games))throw Error("Source contracts mismatched");
+    if(v3.retrievedAtUtc!==r.retrievedAtUtc||!Array.isArray(v3.teams)||v3.teams.length!==r.teams.length)throw Error("Elo 3.0 source timestamp or team coverage mismatch");
+    setData(r);setGames(g.games);setFixtures(f.games);setElo3(v3);
     const requested=new URLSearchParams(window.location.search).get("team");
     setSelected(r.teams.some((t:Team)=>t.teamId===requested)?requested:r.teams[0]?.teamId||"");
  }).catch(e=>{if(alive)setError(String(e.message||e))});return()=>{alive=false}},[]);
- const teams=useMemo(()=>[...(data?.teams||[])].sort((a,b)=>b.rating-a.rating),[data]);
+ const teams=useMemo(()=>{const index=new Map((elo3?.teams||[]).map(t=>[t.teamId,t]));return [...(data?.teams||[])].map(t=>({...t,rating:index.get(t.teamId)?.rating??t.rating,rank:index.get(t.teamId)?.rank??t.rank})).sort((a,b)=>a.rank-b.rank)},[data,elo3]);
  const team=teams.find(t=>t.teamId===selected);
  const relevant=useMemo(()=>team?games.filter(g=>g.home===team.name||g.away===team.name).slice(-10).reverse():[],[team,games]);
  const upcoming=useMemo(()=>fixtures.filter(f=>f.homeTeamId===selected||f.awayTeamId===selected)
@@ -38,29 +41,29 @@ export default function TeamIntelligence(){
  async function share(){if(!team)return;const url=new URL(window.location.href);url.searchParams.set("view","teams");url.searchParams.set("team",team.teamId);
   try{await navigator.clipboard.writeText(url.toString());setCopied(true)}catch{setCopied(false)}}
  return <section className="content-section v12-team" aria-label="Current team intelligence center">
-   <div className="v12-head"><span className="section-kicker">2026–27 / VERIFIED NCAA TEAM DATA</span><h1>TEAM <em>INTELLIGENCE.</em></h1>
-     <p>Search a team, inspect actual performance and rating history, and see sourced upcoming matchups. Share any selected team directly.</p></div>
+   <div className="v12-head"><span className="section-kicker">2026–27 / ELO 3.0 RESEARCH POWER RANKINGS</span><h1>TEAM <em>INTELLIGENCE.</em></h1>
+     <p>Elo 3.0 power rankings from accepted 2027 scores, with source-verified efficiency where available. Previous-season priors are neutral until team IDs are independently verified. Historical game-change charts below still describe the original Elo.</p></div>
    {!data?<p className="premium-empty" role={error?"alert":"status"}>{error||"Loading sourced team data…"}</p>:
    <div className="v12-team-layout">
     <aside className="v12-team-list"><label>FIND A PROGRAM<input aria-label="Search teams" placeholder="Search school..." value={search} onChange={e=>setSearch(e.target.value)}/></label>
-     <div className="v12-team-scroll">{teams.filter(t=>t.name.toLowerCase().includes(search.toLowerCase())).map(t=><button key={t.teamId} className={selected===t.teamId?"selected":""} onClick={()=>pick(t.teamId)} aria-pressed={selected===t.teamId}><strong>{t.name}</strong><span>{t.wins}–{t.losses} · {t.rating.toFixed(0)} Elo</span></button>)}</div>
+     <div className="v12-team-scroll">{teams.filter(t=>t.name.toLowerCase().includes(search.toLowerCase())).map(t=><button key={t.teamId} className={selected===t.teamId?"selected":""} onClick={()=>pick(t.teamId)} aria-pressed={selected===t.teamId}><strong>{t.name}</strong><span>#{t.rank} · {t.wins}–{t.losses} · {t.rating.toFixed(0)} Elo 3.0</span></button>)}</div>
     </aside>
     {team&&<article className="v12-team-detail">
      <div className="v12-team-title"><div><span className="feature-kicker">{team.conferenceVerified?team.conference:"CONFERENCE NOT VERIFIED"}</span><h2>{team.name}</h2><p>As of {data.retrievedAtUtc?new Date(data.retrievedAtUtc).toLocaleString("en-US",{timeZone:"America/New_York"}):"latest verified capture"} ET</p></div><button onClick={share}>{copied?"LINK COPIED ✓":"COPY TEAM LINK ↗"}</button></div>
      <div className="v12-stats">{[
        ["RECORD",team.wins+"–"+team.losses],
-       ["CURRENT ELO",team.rating.toFixed(0)],
+       ["ELO 3.0 RATING",team.rating.toFixed(0)],
        ["FORM / TREND",(team.trend>=0?"+":"")+team.trend.toFixed(1)],
        ["AVG OPPONENT ELO AT GAME",team.opponentAverageEloAtGame?.toFixed(0)||team.opponentAverageElo?.toFixed(0)||"—"],
        ["LAST GAME ELO Δ",team.eloLastGameChange==null?"—":(team.eloLastGameChange>=0?"+":"")+team.eloLastGameChange.toFixed(1)]
      ].map(([k,v])=><div key={k}><small>{k}</small><strong>{v}</strong></div>)}</div>
-     <div className="v12-card"><h3>GAME-BY-GAME ELO CHANGES</h3>
-       <p className="v12-subtle">Every accepted score changes both teams' ratings. Updates use the opponent's rating before that game, designated home advantage and a capped score-margin multiplier. The classic Elo control is {team.classicElo?.toFixed(1)??"unavailable"}; this game-aware rating is {team.rating.toFixed(1)}. Neither is an official NCAA ranking.</p>
+     <div className="v12-card"><h3>ORIGINAL ELO GAME-BY-GAME HISTORY</h3>
+       <p className="v12-subtle">Every accepted score changes both teams' ratings. Updates use the opponent's rating before that game, designated home advantage and a capped score-margin multiplier. The classic Elo control is {team.classicElo?.toFixed(1)??"unavailable"}; the Elo 3.0 rating above is {team.rating.toFixed(1)}. Neither is an official NCAA ranking.</p>
        {(team.eloRecentChanges||[]).map(r=><div className="v12-result" key={r.contestId||r.date+r.opponent}><span>{r.date} · {r.result} vs {r.opponent} · {r.margin>0?"+":""}{r.margin} pts · Opp. pregame Elo {r.opponentEloBefore.toFixed(0)}</span><b>{r.eloChange>=0?"+":""}{r.eloChange.toFixed(2)} Elo</b></div>)}
        {!team.eloRecentChanges?.length&&<p className="v12-subtle">No rating updates have been sourced for this program.</p>}
        <p className="v12-subtle">Game-score source can be delayed and lacks authoritative neutral-site and injury details; ratings rebuild on scheduled publication, not instantly after the buzzer.</p>
      </div>
-     <div className="v12-card"><h3>ELO TRAJECTORY</h3><Trend values={team.history||[]}/><p className="v12-subtle">Recorded games drive this source-backed rating curve. Each calendar date is evaluated before that day's scores are used to update Elo; published historical forecasts remain unchanged.</p></div>
+     <div className="v12-card"><h3>ORIGINAL ELO TRAJECTORY (REFERENCE)</h3><Trend values={team.history||[]}/><p className="v12-subtle">Recorded games drive this source-backed rating curve. Each calendar date is evaluated before that day's scores are used to update Elo; published historical forecasts remain unchanged.</p></div>
      <div className="v12-stats">{[
        ["ADJUSTED OFFENSE",team.adjOff100?.toFixed(1)??"—"],
        ["ADJUSTED DEFENSE",team.adjDef100?.toFixed(1)??"—"],

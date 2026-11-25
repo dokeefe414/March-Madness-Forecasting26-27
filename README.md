@@ -1,3 +1,29 @@
+**Elo 3.0 statistical coverage:** [Verified features and limitations](docs/elo-v3-stats.md).
+
+### Elo 3.0 current Teams tab (experimental)
+
+The Pages workflow now publishes a date-matched `current/elo-v3-teams.json`
+from the same accepted 2027 games and verified paired boxes as the source
+ratings. The **Teams** tab displays Elo 3.0 power ranks and ratings; older
+Elo game-change history is explicitly labeled as a reference. Elo 3.0 has
+neutral preseason priors until an authoritative cross-year identity exists,
+rather than unsafe provisional school-name carryover. The original production
+forecast/archive engine remains unchanged: **the Teams ranking migration does
+not silently rewrite upcoming predictions or bracket probabilities**.
+See `docs/elo-v3-research.md`.
+
+## Elo 3.0 six-factor research challenger — November 25, 2026
+
+The new `research/forecast/elo_v3.py` implements bounded opponent-efficiency
+integration (only with verified paired boxes), adaptive home advantage,
+favorite-aware margin weighting, recent-form/uncertainty shrinkage,
+stable-ID previous-season carryover and past-date temperature calibration.
+It runs a matched 2016–2025 historical comparison against the production
+GameAware Elo with Brier and log loss, without replacing live predictions.
+**Historical compact scores do not contain possession boxes**, so efficiency
+is deliberately disabled in that historical benchmark. See
+[methodology and limits](docs/elo-v3-research.md).
+
 # MARCH FORECAST
 
 **Know the numbers. Question the models. Forecast the madness.**
@@ -19,6 +45,31 @@ March Forecast is an open-source NCAA men's basketball forecasting and model-eva
 > **Scientific trust is part of the product.** Actual results, historical backtests, NCAA-source team/conference membership, hypothetical selection scenarios, and future pretipoff predictions always have different labels. No invented March participants or scores. No "D-I certified" label from a name match. No promise that a more complex model will win.
 
 ---
+
+## Date-frozen efficiency + offensive/defensive latent research — November 25, 2026
+
+A new source-joined, two-sided possession feature benchmark uses **only
+prior-date NCAA team boxes** to update separate offense and defense latent
+strengths. It compares the latent probabilities, a matched simple Elo baseline
+and an earlier-date-weighted ensemble on exactly the same eligible games,
+reporting missing coverage and abstentions rather than imputing box scores.
+It is research-only and **does not** claim to replace production Elo.
+Run `python -m research.forecast.efficiency_latent` after preparing the
+source-game-box artifact, and
+`python -m unittest research.tests.test_efficiency_latent`.
+See [method, data contracts, limitations and scientific gates](docs/efficiency-latent-research.md).
+
+## Model strengthening: promotion-readiness audit — November 25, 2026
+
+A new read-only, fail-closed model readiness report evaluates each archived
+first-pick challenger against paired Elo using settled-game sample size,
+independent dates, Brier improvement and date-block uncertainty. It explicitly
+blocks promotion without independently certified candidate calibration,
+historical robustness and verified prediction coverage. Production Elo and
+immutable forecasts are unchanged. Run
+`python -m research.forecast.model_readiness` and
+`python -m unittest research.tests.test_model_readiness`.
+See [implementation, safeguards and six-stage strengthening plan](docs/model-strengthening-2026-11-25.md).
 
 ## Same-day prediction coverage fix — November 23, 2026
 

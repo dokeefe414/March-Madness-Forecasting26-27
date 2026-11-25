@@ -16,6 +16,35 @@ jobs:
         env:
           PYTHONPATH: research
         run: python -m unittest discover -s research/tests -v
+      - name: Fetch real season NCAA games and paired team boxes
+        env:
+          PYTHONPATH: research
+        run: python -m forecast.live --out research/outputs/live-ratings.json --games-out research/outputs/live-games.json --box-out research/outputs/live-paired-boxes.json --skip-espn
+      - name: Evaluate source-backed date-frozen latent and ensemble models
+        env:
+          PYTHONPATH: research
+        run: python -m forecast.efficiency_latent --games research/outputs/live-games.json --ratings research/outputs/live-ratings.json --boxes research/outputs/live-paired-boxes.json --out research/outputs/live-efficiency-latent-benchmark.json
+      - name: Upload real-season model comparison and source coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-season-efficiency-latent-benchmark
+          path: |
+            research/outputs/live-ratings.json
+            research/outputs/live-games.json
+            research/outputs/live-paired-boxes.json
+            research/outputs/live-efficiency-latent-benchmark.json
+          if-no-files-found: warn
+      - name: Evaluate six-factor Elo 3.0 against production Elo on historical seasons
+        env:
+          PYTHONPATH: research
+        run: python -m forecast.elo_v3 --out research/outputs/elo3-historical.json
+      - name: Upload Elo 3.0 historical comparison
+        uses: actions/upload-artifact@v4
+        with:
+          name: elo3-historical-comparison
+          path: research/outputs/elo3-historical.json
+          if-no-files-found: error
       - name: Test nightly source quality and date guards
         env:
           PYTHONPATH: research
