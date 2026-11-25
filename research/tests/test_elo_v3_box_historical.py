@@ -72,6 +72,23 @@ class HistoricalBoxTests(unittest.TestCase):
         self.assertNotEqual(report["variants"]["scoreOnly"]["brier"],
                             report["variants"]["efficiency"]["brier"])
 
+    def test_five_year_bootstrap_uses_identical_eligible_game_counts(self):
+        grouped={2018:[Game(2018,132,1,2,75,68,"H","2018-132-1-2")]}
+        source=[]
+        for year in range(2019,2024):
+            games=[Game(year,d,1,2,75,68,"H",f"{year}-{d}-1-2")
+                   for d in list(range(1,16))+[132]]
+            grouped[year]=games
+            source.extend(record(g.day_num,year) for g in games)
+        pairs,coverage=parse_detail(csv_bytes(source),grouped,
+                                    years=tuple(range(2019,2024)))
+        report=evaluate(grouped,pairs,coverage,years=tuple(range(2019,2024)))
+        self.assertEqual(report["status"],"ready")
+        self.assertEqual(report["eligiblePairedGames"],65)
+        self.assertEqual(len(report["holdoutSeasons"]),5)
+        self.assertEqual(len(report["seasonBlockGain95"]["efficiency"]),2)
+        self.assertTrue(all(y["games"]==13 for y in report["bySeason"]))
+
     def test_conflicting_scores_and_duplicate_identity_are_withheld(self):
         grouped=season()
         records=[record(g.day_num) for g in grouped[2023]]

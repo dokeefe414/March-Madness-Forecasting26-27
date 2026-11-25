@@ -241,7 +241,7 @@ def evaluate(grouped:dict, pairs:dict, coverage:dict, years=HOLDOUT_YEARS):
         baseline=metrics(eligible,"scoreOnly")
         comparisons={variant:metrics(eligible,variant) for variant in FEATURES}
         seasons.append({
-            "season":year,"sourceGames":len(games),"pairedBoxGames":len(verified),
+            "season":year,"games":len(eligible),"sourceGames":len(games),"pairedBoxGames":len(verified),
             "eligiblePregameGames":len(eligible),
             "extendedEligibleGames":sum(row["extendedEligible"] for row in eligible),
             "coverage":info["coverage"],
