@@ -48,7 +48,7 @@ def metrics(rows, key):
     logloss = -sum(r["y"] * math.log(max(1e-12, min(1 - 1e-12, r[key])))
                    + (1 - r["y"]) * math.log(max(1e-12, min(1 - 1e-12, 1 - r[key])))
                    for r in rows) / n
-    accuracy = sum((r[key] > .5) == bool(r["y"]) for r in rows) / n
+    accuracy = sum(.5 if r[key] == .5 else 1. if ((r[key] > .5) == bool(r["y"])) else 0. for r in rows) / n
     bins = [[0, 0., 0.] for _ in range(10)]
     for row in rows:
         i = min(9, int(row[key] * 10))
@@ -95,7 +95,7 @@ def replay(games, priors=None, paired_boxes=None):
         raise ValueError("Multiple seasons in Elo 3 replay")
     ids = [g.contest_id for g in games]
     if any(not x for x in ids) or len(ids) != len(set(ids)):
-        raise ValueError("Missing or duplicate contest ID")
+        raise ValueError("Duplicate or missing contest ID")
     initial = dict(priors or {})
     if any(type(v) not in (float, int) or not math.isfinite(v) or not 1000 <= v <= 2000
            for v in initial.values()):
