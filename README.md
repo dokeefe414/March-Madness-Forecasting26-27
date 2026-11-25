@@ -1,3 +1,15 @@
+## Elo 3.0 six-factor research challenger — November 25, 2026
+
+The new `research/forecast/elo_v3.py` implements bounded opponent-efficiency
+integration (only with verified paired boxes), adaptive home advantage,
+favorite-aware margin weighting, recent-form/uncertainty shrinkage,
+stable-ID previous-season carryover and past-date temperature calibration.
+It runs a matched 2016–2025 historical comparison against the production
+GameAware Elo with Brier and log loss, without replacing live predictions.
+**Historical compact scores do not contain possession boxes**, so efficiency
+is deliberately disabled in that historical benchmark. See
+[methodology and limits](docs/elo-v3-research.md).
+
 # MARCH FORECAST
 
 **Know the numbers. Question the models. Forecast the madness.**
