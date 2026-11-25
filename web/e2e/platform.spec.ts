@@ -127,6 +127,93 @@ test("v0.9 model lab has deep link, source-honest unavailable forward evidence a
   await expect(page.getByRole("heading",{name:/GAME INTELLIGENCE/i})).toBeVisible();
 });
 
+test("Elo 3.0 prospective Model Lab shows first-pick coverage, unscored disagreement and cohort segments",async ({page})=>{
+  const segment=(segment:string,firstFrozenPicks:number)=>({
+    segment,firstFrozenPicks,unverifiedOrPending:firstFrozenPicks,
+    games:0,gameDates:0,baselineBrier:null,elo3Brier:null,brierGain:null,
+    baselineAccuracy:null,elo3Accuracy:null,status:"no-verified-pairs"
+  });
+  const d={
+    schemaVersion:1,type:"elo3-original-first-pick-diagnostics",status:"collecting",
+    launchCapturedAtUtc:"2026-11-25T21:31:52Z",
+    allCapturedShadowPredictions:93,distinctShadowCapturedEvents:93,
+    eligibleOriginalFirstPicks:40,eligibleOriginalFirstDates:2,
+    afterLaunchOriginalFirstPicks:40,afterLaunchMissingShadow:0,
+    afterLaunchCandidateCoverage:1,laterOnlyShadowEventsExcluded:53,
+    verifiedPairedFinals:0,pendingOriginalFirstPicks:40,pendingByStatus:{"upcoming":40},
+    difference:{meanPercentagePoints:4.39,medianPercentagePoints:3.05,
+      differentWinnerPicks:2,differenceAtLeast10pp:5},
+    topUpcomingDisagreements:[{
+      eventId:"live-203",home:"Example Home",away:"Example Away",
+      scheduledStartUtc:"2027-01-25T02:00:00Z",
+      baselineHomeWinProbability:.55,elo3HomeWinProbability:.71,
+      differencePercentagePoints:16,differentWinner:false,neutralSite:true
+    }],
+    segments:{
+      baselineStrength:[segment("Close (50-59%)",12),segment("Moderate favorite (60-74%)",18),
+        segment("Strong favorite (75%+)",10)],
+      disagreementSize:[segment("Under 5 pp",25),segment("5 to under 10 pp",10),
+        segment("10+ pp",5)],
+      venue:[segment("Listed home",34),segment("Neutral",6)],
+      tipoffLead:[segment("15 minutes to under 6 hours",10),
+        segment("6 to under 24 hours",20),segment("24+ hours",10)],
+      winnerAgreement:[segment("Same pick / 50% tie",38),segment("Different picks",2)]
+    },
+    calibration:{games:0,status:"no-verified-pairs",ece:null,bins:[]},
+  };
+  await page.route("**/current/accuracy-research.json",route=>route.fulfill({
+    contentType:"application/json",body:JSON.stringify({
+      schemaVersion:1,mode:"first-pick-forward-research",
+      generatedAtUtc:"2026-11-25T21:40:00Z",
+      archiveGeneratedAtUtc:"2026-11-25T21:31:52Z",
+      immutableFirstPicks:40,verifiedUniqueFinals:0,pendingUniqueGames:40,
+      pendingByStatus:{"upcoming":40,"recent-start":0,"awaiting-final":0,"delayed-review":0},
+      pendingReview:[],
+      overall:{games:0,brier:null,logLoss:null,accuracy:null},
+      calibrationDiagnostics:{
+        status:"insufficient-evidence",games:0,expectedCalibrationError:null,bins:[]
+      },
+      eloCalibrationDiagnostics:{
+        status:"insufficient-evidence",games:0,expectedCalibrationError:null,bins:[]
+      },
+      byRatingVersion:[],daily:[],weekly:[],pairedComparisons:[],
+      frozenScoreResults:{games:0,marginMAE:null,totalMAE:null,
+        homeScoreMAE:null,awayScoreMAE:null,byMethod:[]},
+      verification:{independentESPNFinalRequired:true,matchingNCAAScoreRequired:true,
+        esponFinalsInspectedInLastArchive:0,sourceWarnings:[],observedScheduleChanges:[]},
+      reviewOnly:true,autoPromoted:false,
+      prospectiveElo3:{
+        status:"collecting-first-published-evidence",
+        modelVersion:"elo3-prospective-shadow-v1",
+        firstFrozenPicks:40,firstFrozenDates:2,
+        firstCaptureUtc:"2026-11-25T21:31:52Z",lastCaptureUtc:"2026-11-25T21:31:52Z",
+        verifiedPairedFinals:0,pendingOriginalFirstPicks:40,
+        pairedComparison:{model:"Elo 3.0 prospective",pairedGames:0,pairedDays:0,
+          eloBrier:null,candidateBrier:null,eloAccuracy:null,candidateAccuracy:null,
+          brierGain:null,dateBlockGain95:null,reviewEligible:false,autoPromoted:false},
+        onlyEarliestFirstPick:true,retrospectiveBackfill:false,
+        activePredictorReplaced:false,note:"Only frozen future events",
+        diagnostics:d
+      }
+    })
+  }));
+  await page.goto("/?view=models");
+  await expect(page.locator('main[data-hydrated="yes"]')).toBeVisible();
+  const panel=page.locator("#elo3-prospective-evidence");
+  await expect(panel).toBeVisible();
+  await expect(panel).toContainText("FIRST-PUBLISHED ELO 3.0 PICKS");
+  await expect(panel).toContainText("ALL ELO 3.0 RECORDINGS");
+  await expect(panel).toContainText("93 saved");
+  await expect(panel).toContainText("53 later-only events excluded");
+  await expect(panel).toContainText("Example Away at Example Home");
+  await expect(panel).toContainText("16.00 pp");
+  const group=panel.getByRole("combobox",{name:"Elo 3.0 evaluation segment"});
+  await expect(group).toBeVisible();
+  await group.selectOption("venue");
+  await expect(panel.getByRole("cell",{name:"Neutral",exact:true})).toBeVisible();
+  await expect(panel).toContainText("no verified pairs");
+});
+
 test("v0.9 real archived event snapshots render before-tipoff timeline and verifiable missed-game receipt",async ({page})=>{
   const tipoff=new Date(Date.now()+2*24*60*60*1000).toISOString();
   const fixtureData={schemaVersion:1,

@@ -1,3 +1,15 @@
+## Elo 3.0 prospective cohort diagnostics — November 25, 2026
+
+Model Lab now separates **all captured** Elo 3.0 predictions from genuinely
+**earliest first-published** Elo 3.0 probabilities, preventing later-only
+forecasts from inflating prospective accuracy. It shows coverage, upcoming
+model disagreements, side reversals, and verified Brier/accuracy by baseline
+favorite strength, disagreement size, venue and capture lead.
+Pending games never become losses; small-sample results remain descriptive.
+The production forecasts and existing immutable snapshots are unchanged.
+
+[Forward evaluation runbook](docs/elo-v3-forward-diagnostics.md).
+
 ## Elo 3.0 prospective shadow first picks — November 25, 2026
 
 Elo 3.0 now **freezes genuinely new pretipoff candidate probabilities** into

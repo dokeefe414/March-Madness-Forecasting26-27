@@ -18,6 +18,7 @@ from zoneinfo import ZoneInfo
 
 from .snapshot import parse_time
 from .performance import _rate
+from .elo_v3_forward_diagnostics import derive as elo3_diagnostics
 
 LOCAL=ZoneInfo("America/New_York")
 FIELDS={
@@ -210,6 +211,13 @@ def derive(folder:Path,now:datetime|None=None)->dict:
         "activePredictorReplaced":False,
         "note":"Elo3 is frozen before listed tipoff alongside contemporaneous baseline Elo. Independent ESPN STATUS_FINAL plus matching NCAA score required. Earlier first picks cannot acquire Elo3 later.",
     }
+    prospective_elo3["diagnostics"]=elo3_diagnostics(
+        first,snapshots,outcomes,pending,now)
+    if (prospective_elo3["diagnostics"]["eligibleOriginalFirstPicks"]
+           != prospective_elo3["firstFrozenPicks"] or
+        prospective_elo3["diagnostics"]["verifiedPairedFinals"]
+           != prospective_elo3["verifiedPairedFinals"]):
+        raise ValueError("Prospective Elo3 diagnostic cohort disagrees with source accuracy")
     shadow=[r for r in outcomes if r["scoreShadow"] is not None]
     score_metrics={"games":len(shadow),
       "marginMAE":round(sum(r["scoreShadow"]["marginError"] for r in shadow)/len(shadow),5) if shadow else None,
