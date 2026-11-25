@@ -26,6 +26,7 @@ FIELDS={
  "Adaptive state-space":"adaptiveStateSpaceHomeWinProbability",
  "Opponent adjusted":"opponentAdjustedHomeWinProbability",
  "Frozen ensemble":"ensembleHomeWinProbability",
+ "Elo 3.0 prospective":"elo3HomeWinProbability",
 }
 MIN_INTERVAL_GAMES=40
 MIN_INTERVAL_DATES=6
@@ -164,7 +165,7 @@ def derive(folder:Path,now:datetime|None=None)->dict:
            for period,items in sorted(by.items())]
     comparisons=[]
     for label in ["Online logistic challenger","Fixed state-space","Adaptive state-space",
-                  "Opponent adjusted","Frozen ensemble"]:
+                  "Opponent adjusted","Frozen ensemble","Elo 3.0 prospective"]:
         paired=[dict(r,candidate=r[label]) for r in outcomes
                 if r["elo"] is not None and r[label] is not None]
         e=_metrics(paired,"elo")
@@ -178,6 +179,37 @@ def derive(folder:Path,now:datetime|None=None)->dict:
           "reviewEligible":bool(len(paired)>=100 and len({r["day"] for r in paired})>=12 and
                   gain is not None and gain>=.002 and ci is not None and ci[0]>0),
           "autoPromoted":False})
+    # Only the EARLIEST original snapshot for each game is eligible.
+    shadow_picks=[(s,p) for s,p in first.values()
+                  if p.get("elo3HomeWinProbability") is not None]
+    for s,p in shadow_picks:
+        meta=p.get("elo3Research")
+        if (not isinstance(meta,dict) or
+            meta.get("modelVersion")!="elo3-prospective-shadow-v1" or
+            meta.get("ratingRetrievedAtUtc")!=s["ratingRetrievedAtUtc"] or
+            meta.get("boxRetrievedAtUtc")!=s["ratingRetrievedAtUtc"] or
+            meta.get("ratingCutoffExclusive")!=p["scheduledEasternDate"] or
+            (meta.get("trainedThroughDate") is not None and
+             meta["trainedThroughDate"]>=p["scheduledEasternDate"])):
+            raise ValueError("Prospective Elo3 original first-pick provenance mismatch")
+        if _valid_probability(p["elo3HomeWinProbability"]) is None:
+            raise ValueError("Prospective Elo3 original first-pick probability invalid")
+    elo3_comparison=next(c for c in comparisons if c["model"]=="Elo 3.0 prospective")
+    prospective_elo3={
+        "status":"review-eligible" if elo3_comparison["reviewEligible"] else
+                 "collecting-first-published-evidence",
+        "modelVersion":"elo3-prospective-shadow-v1",
+        "firstFrozenPicks":len(shadow_picks),
+        "firstFrozenDates":len({p["scheduledEasternDate"] for _,p in shadow_picks}),
+        "firstCaptureUtc":min((s["generatedAtUtc"] for s,p in shadow_picks),default=None),
+        "lastCaptureUtc":max((s["generatedAtUtc"] for s,p in shadow_picks),default=None),
+        "verifiedPairedFinals":elo3_comparison["pairedGames"],
+        "pendingOriginalFirstPicks":len(shadow_picks)-elo3_comparison["pairedGames"],
+        "pairedComparison":elo3_comparison,
+        "onlyEarliestFirstPick":True,"retrospectiveBackfill":False,
+        "activePredictorReplaced":False,
+        "note":"Elo3 is frozen before listed tipoff alongside contemporaneous baseline Elo. Independent ESPN STATUS_FINAL plus matching NCAA score required. Earlier first picks cannot acquire Elo3 later.",
+    }
     shadow=[r for r in outcomes if r["scoreShadow"] is not None]
     score_metrics={"games":len(shadow),
       "marginMAE":round(sum(r["scoreShadow"]["marginError"] for r in shadow)/len(shadow),5) if shadow else None,
@@ -219,6 +251,7 @@ def derive(folder:Path,now:datetime|None=None)->dict:
       "daily":group(outcomes,"day"),
       "weekly":group(outcomes,"weekStart"),
       "pairedComparisons":comparisons,
+      "prospectiveElo3":prospective_elo3,
       "frozenScoreResults":score_metrics,
       "reviewOnly":True,"autoPromoted":False,
       "policy":"Only unique earliest source-timestamped predictions with independent ESPN final and matching NCAA score; frozen research shadow scores only when present at original tipoff. Never backfill or change an official pick.",
