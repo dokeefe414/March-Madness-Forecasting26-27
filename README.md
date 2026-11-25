@@ -20,6 +20,18 @@ March Forecast is an open-source NCAA men's basketball forecasting and model-eva
 
 ---
 
+## Model strengthening: promotion-readiness audit — November 25, 2026
+
+A new read-only, fail-closed model readiness report evaluates each archived
+first-pick challenger against paired Elo using settled-game sample size,
+independent dates, Brier improvement and date-block uncertainty. It explicitly
+blocks promotion without independently certified candidate calibration,
+historical robustness and verified prediction coverage. Production Elo and
+immutable forecasts are unchanged. Run
+`python -m research.forecast.model_readiness` and
+`python -m unittest research.tests.test_model_readiness`.
+See [implementation, safeguards and six-stage strengthening plan](docs/model-strengthening-2026-11-25.md).
+
 ## Same-day prediction coverage fix — November 23, 2026
 
 Upcoming games on a day with an earlier published final no longer disappear
