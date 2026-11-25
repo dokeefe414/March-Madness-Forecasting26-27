@@ -20,6 +20,33 @@ jobs:
         env:
           PYTHONPATH: research
         run: python -m forecast.live --out research/outputs/live-ratings.json --games-out research/outputs/live-games.json --box-out research/outputs/live-paired-boxes.json --skip-espn
+      - name: Verify real-source Elo 3.0 pretipoff shadow contract
+        env:
+          PYTHONPATH: research
+        run: |
+          python - <<'PY'
+          import json
+          from datetime import date,timedelta
+          from pathlib import Path
+          from forecast.elo_v3_shadow import Elo3Pregame
+          src=Path("research/outputs")
+          ratings=json.loads((src/"live-ratings.json").read_text())
+          games=json.loads((src/"live-games.json").read_text())
+          boxes=json.loads((src/"live-paired-boxes.json").read_text())
+          shadow=Elo3Pregame(ratings,games,boxes)
+          day=(date.fromisoformat(ratings["lastGameDate"])+timedelta(days=1)).isoformat()
+          teams=ratings["teams"]
+          assert len(teams)>=2
+          p,meta=shadow.predict(teams[0]["name"],teams[1]["name"],day,False)
+          assert 0<p<1 and meta["trainedThroughDate"]<day
+          assert meta["sourceGames"]==ratings["regularSeasonGames"]
+          assert meta["ratingRetrievedAtUtc"]==ratings["retrievedAtUtc"]
+          out={"candidateProbability":round(p,7),"scheduledEasternDate":day,
+               "sourceTeams":[teams[0]["name"],teams[1]["name"]],
+               "researchOnly":True,**meta}
+          (src/"live-elo3-prospective-sanity.json").write_text(json.dumps(out,indent=2)+"\\n")
+          print("Elo3 prospective current-source sanity:",out["sourceGames"],"games and",out["pairedBoxGames"],"boxes")
+          PY
       - name: Evaluate source-backed date-frozen latent and ensemble models
         env:
           PYTHONPATH: research
@@ -53,6 +80,7 @@ jobs:
             research/outputs/live-paired-boxes.json
             research/outputs/live-efficiency-latent-benchmark.json
             research/outputs/live-elo3-power.json
+            research/outputs/live-elo3-prospective-sanity.json
           if-no-files-found: warn
       - name: Evaluate six-factor Elo 3.0 against production Elo on historical seasons
         env:

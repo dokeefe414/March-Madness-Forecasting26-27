@@ -1,3 +1,18 @@
+## Elo 3.0 prospective shadow first picks — November 25, 2026
+
+Elo 3.0 now **freezes genuinely new pretipoff candidate probabilities** into
+the existing append-only ESPN/NCAA verified game archive. Every candidate
+is built from games and source-paired stats strictly **before its scheduled
+Eastern game date**, with exactly matching source timestamps, unique team IDs,
+a 15-minute first-pick buffer, and immutable model metadata.
+`forecast.accuracy_research` scores only the **earliest published snapshot**
+per event against the simultaneously frozen incumbent Elo after independent
+ESPN/NCAA final verification. New Model Lab prospective evidence counts
+unsettled picks separately; it does not fabricate past Elo3 forecasts or
+auto-promote a statistically unproven candidate.
+
+[Prospective validation protocol and runbook](docs/elo-v3-prospective.md).
+
 ## Source-matched historical box-score benchmark — November 25, 2026
 
 A new pinned **2003+ men's Kaggle detailed game-box** experiment tests four
