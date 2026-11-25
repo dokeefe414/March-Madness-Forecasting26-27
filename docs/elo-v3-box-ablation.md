@@ -55,6 +55,36 @@ The extended features are experimental, heavily shrunk and potentially redundant
 
 The report gives pooled and per-season Brier score, log loss, winner accuracy, expected calibration error and a deterministic season-block 95% bootstrap interval for differences in Brier. **Positive Brier gain** means adding the observed box-stat family lowered average squared probability error compared to score-only Elo 3.0. Small or negative gains must be shown rather than hidden. Testing hypotheses on fixed prior holdouts introduces selection risk; one cannot claim an untouched holdout after observing these years.
 
+## Verified first historical run (November 25, 2026)
+
+The pinned detailed source passed byte-level Git blob validation, then
+matched **52,763 of 53,010** independently pinned compact-score games.
+Another **247** detailed records were excluded for invalid box measurements.
+No box record or possession count was invented.
+
+- Detailed-source SHA-256: `d9e8fc8a22ea3ac74baf246af9ad49012fb55746c88ca34d1be483f43f7d71e3`
+- Compact-source SHA-256: `79b15ea3016c7887f1031c31a47b68494d5c08d4ba745ad1954a7af0ca3542b4`
+- Complete test years: 2016, 2017, 2018, 2019, 2022, 2023, 2024, 2025.
+- Date-frozen **38,942 identical eligible game predictions**.
+
+| Ablation | Brier ↓ | Log loss ↓ | Winner accuracy ↑ | ECE ↓ |
+|---|---:|---:|---:|---:|
+| Score-only Elo 3.0 | 0.193204 | 0.568352 | 70.1582% | 0.024139 |
+| + Estimated-possession efficiency | 0.190746 | 0.562103 | 70.5716% | 0.019478 |
+| + Observed Four Factors | 0.190645 | 0.561841 | 70.5845% | 0.019484 |
+| + Supplementary box counts | **0.190582** | **0.561680** | **70.5999%** | 0.019492 |
+
+The incremental Four Factors gain after efficiency is only about
+**+0.000101** Brier. Supplementary assists, steals, blocks, fouls, and extra
+shooting add just **+0.000063** beyond Four Factors. Adding all observed
+box-count groups improved Brier by **+0.002622** over score-only.
+
+All eight eligible seasons showed positive incremental improvements in the
+initial run. The next CI report includes explicit season-block bootstrap
+intervals **for each incremental ablation**, not merely for the combined
+model. These are still retrospective, previously observed holdout years, not
+an untouched prospective trial; do not auto-promote them to 2027 forecasts.
+
 ## Reproduction
 
 ```bash
