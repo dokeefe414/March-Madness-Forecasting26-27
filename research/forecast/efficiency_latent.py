@@ -103,7 +103,7 @@ def evaluate(games: list[dict], ratings: dict, boxes: dict,
     paired = {}
     for row in boxes.get("games", []):
         g = ids.get(str(row.get("id")))
-        if g is None or row["id"] in paired or any(row[k] != g[k] for k in ("date","home","away")):
+        if g is None or str(row["id"]) in paired or any(row[k] != g[k] for k in ("date","home","away")):
             raise ValueError("Box event identity/date mismatch")
         for side in ("homeBox", "awayBox"):
             b = row[side]
@@ -111,7 +111,7 @@ def evaluate(games: list[dict], ratings: dict, boxes: dict,
                 v = b.get(key)
                 if type(v) not in (float,int) or not math.isfinite(v) or not lo <= v <= hi:
                     raise ValueError("Invalid paired possession metric")
-        paired[row["id"]] = row
+        paired[str(row["id"])] = row
     grouped = defaultdict(list)
     for g in games:
         if g["date"] >= cutoff:
@@ -204,7 +204,8 @@ def main() -> None:
     p.add_argument("--boxes",type=Path,default=Path("web/public/current/2027-source-game-boxes.json"))
     p.add_argument("--out",type=Path,default=Path("web/public/current/efficiency-latent-research.json"))
     a=p.parse_args()
-    games=json.loads(a.games.read_text(encoding="utf-8"))
+    games_artifact=json.loads(a.games.read_text(encoding="utf-8"))
+    games=games_artifact["games"]
     ratings=json.loads(a.ratings.read_text(encoding="utf-8"))
     boxes=json.loads(a.boxes.read_text(encoding="utf-8"))
     report=evaluate(games,ratings,boxes)
