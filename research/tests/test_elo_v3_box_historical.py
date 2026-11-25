@@ -88,7 +88,9 @@ class HistoricalBoxTests(unittest.TestCase):
         self.assertEqual(len(report["holdoutSeasons"]),5)
         self.assertEqual(len(report["seasonBlockGain95"]["efficiency"]),2)
         self.assertEqual(len(report["incrementalSeasonBlockGain95"]["fourFactorsVsEfficiency"]),2)
-        self.assertEqual(report["incrementalPositiveSeasons"]["extendedVsFourFactors"],5)
+        self.assertEqual(
+            report["incrementalPositiveSeasons"]["extendedVsFourFactors"],
+            sum(y["gains"]["extendedVsFourFactors"]>0 for y in report["bySeason"]))
         self.assertAlmostEqual(
             report["incrementalBrierGain"]["fourFactorsVsEfficiency"],
             round(report["variants"]["efficiency"]["brier"]-

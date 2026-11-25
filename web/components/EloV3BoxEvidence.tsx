@@ -3,6 +3,13 @@ import {useEffect,useState} from "react";
 
 const base=process.env.NEXT_PUBLIC_BASE_PATH||"";
 const families=["scoreOnly","efficiency","fourFactors","extended"] as const;
+const incremental=["efficiencyVsScoreOnly","fourFactorsVsEfficiency","extendedVsFourFactors"] as const;
+type Increment=typeof incremental[number];
+const incrementalLabels:Record<Increment,string>={
+  efficiencyVsScoreOnly:"Estimated efficiency vs score-only",
+  fourFactorsVsEfficiency:"Four Factors beyond efficiency",
+  extendedVsFourFactors:"Other stats beyond Four Factors",
+};
 type Family=typeof families[number];
 type Scores={games:number;brier:number|null;logLoss:number|null;accuracy:number|null;ece:number|null};
 type Coverage={matched:number;sourceGames:number;
@@ -16,6 +23,9 @@ type Report={schemaVersion:number;type:string;status:string;source:string;
   sourceVerification?:string;boxSourceSha256?:string;
   sourceCoverage?:Coverage;variants?:Record<Family,Scores>;
   brierGainVsScoreOnly?:Record<Family,number|null>;
+  incrementalBrierGain?:Record<Increment,number|null>;
+  incrementalSeasonBlockGain95?:Partial<Record<Increment,number[]|null>>;
+  incrementalPositiveSeasons?:Partial<Record<Increment,number>>;
   seasonBlockGain95?:Partial<Record<Family,number[]|null>>;
   positiveSeasons?:Partial<Record<Family,number>>;
   bySeason?:Year[];reason?:string;limitations?:string[]};
@@ -77,9 +87,11 @@ export default function EloV3BoxEvidence(){
         })}</tbody>
        </table></div>
        <div className="ev2-method-strip">
-        {(["efficiency","fourFactors","extended"] as const).map(k=><div key={k}>
-          <b>{labels[k]}</b>
-          <span>Season-bootstrap 95%: {report.seasonBlockGain95?.[k]?.map(x=>fmt(x,5)).join(" to ")??"Insufficient independent seasons"}</span>
+        {incremental.map(k=><div key={k}>
+          <b>{incrementalLabels[k]}</b>
+          <span>Incremental Brier gain: {fmt(report.incrementalBrierGain?.[k],6)}</span>
+          <span>Season-bootstrap 95%: {report.incrementalSeasonBlockGain95?.[k]?.map(x=>fmt(x,6)).join(" to ")??"Insufficient independent seasons"}</span>
+          <span>Positive seasons: {report.incrementalPositiveSeasons?.[k]??"—"} / {report.holdoutSeasons?.length??0}</span>
         </div>)}
        </div>
        <p className="ev2-footnote">Observed: FGM, FGA, 3PM, 3PA, FTM, FTA, offensive and defensive rebounds, turnovers, assists, steals, blocks and fouls. ESTIMATED: game possessions from FGA − ORB + TO + 0.475 × FTA, averaged across the two teams; offensive/defensive points per 100 use that estimate. Observed shooting does not imply observed possessions. No 2027 cross-source prior carryover or live prediction promotion.</p>
