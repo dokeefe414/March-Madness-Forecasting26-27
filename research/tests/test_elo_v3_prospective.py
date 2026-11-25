@@ -134,6 +134,12 @@ class Elo3ProspectiveTests(unittest.TestCase):
             self.assertIsNone(research["pairedComparison"]["dateBlockGain95"])
             self.assertFalse(research["pairedComparison"]["reviewEligible"])
             self.assertFalse(research["activePredictorReplaced"])
+            diagnostics=research["diagnostics"]
+            self.assertEqual(diagnostics["eligibleOriginalFirstPicks"],1)
+            self.assertEqual(diagnostics["verifiedPairedFinals"],1)
+            self.assertEqual(diagnostics["allCapturedShadowPredictions"],1)
+            self.assertEqual(diagnostics["overallVerified"]["games"],1)
+            self.assertEqual(diagnostics["overallVerified"]["status"],"descriptive-only")
 
     def test_later_snapshot_cannot_backfill_missing_first_elo3(self):
         ratings,games,boxes=current()
@@ -147,6 +153,8 @@ class Elo3ProspectiveTests(unittest.TestCase):
             report=derive(root,NOW+timedelta(hours=2))
             self.assertEqual(report["prospectiveElo3"]["firstFrozenPicks"],0)
             self.assertEqual(report["prospectiveElo3"]["verifiedPairedFinals"],0)
+            self.assertEqual(report["prospectiveElo3"]["diagnostics"]["laterOnlyShadowEventsExcluded"],1)
+            self.assertEqual(report["prospectiveElo3"]["diagnostics"]["allCapturedShadowPredictions"],1)
 
     def test_audit_rejects_tampered_candidate_timestamp_and_score(self):
         ratings,games,boxes=current()
