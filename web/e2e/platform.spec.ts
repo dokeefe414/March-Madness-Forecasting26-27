@@ -164,6 +164,24 @@ test("Elo 3.0 prospective Model Lab shows first-pick coverage, unscored disagree
   await page.route("**/current/accuracy-research.json",route=>route.fulfill({
     contentType:"application/json",body:JSON.stringify({
       schemaVersion:1,mode:"first-pick-forward-research",
+      generatedAtUtc:"2026-11-25T21:40:00Z",
+      archiveGeneratedAtUtc:"2026-11-25T21:31:52Z",
+      immutableFirstPicks:40,verifiedUniqueFinals:0,pendingUniqueGames:40,
+      pendingByStatus:{"upcoming":40,"recent-start":0,"awaiting-final":0,"delayed-review":0},
+      pendingReview:[],
+      overall:{games:0,brier:null,logLoss:null,accuracy:null},
+      calibrationDiagnostics:{
+        status:"insufficient-evidence",games:0,expectedCalibrationError:null,bins:[]
+      },
+      eloCalibrationDiagnostics:{
+        status:"insufficient-evidence",games:0,expectedCalibrationError:null,bins:[]
+      },
+      byRatingVersion:[],daily:[],weekly:[],pairedComparisons:[],
+      frozenScoreResults:{games:0,marginMAE:null,totalMAE:null,
+        homeScoreMAE:null,awayScoreMAE:null,byMethod:[]},
+      verification:{independentESPNFinalRequired:true,matchingNCAAScoreRequired:true,
+        esponFinalsInspectedInLastArchive:0,sourceWarnings:[],observedScheduleChanges:[]},
+      reviewOnly:true,autoPromoted:false,
       prospectiveElo3:{
         status:"collecting-first-published-evidence",
         modelVersion:"elo3-prospective-shadow-v1",
