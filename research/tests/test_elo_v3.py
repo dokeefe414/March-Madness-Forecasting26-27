@@ -45,6 +45,51 @@ class Elo3Tests(unittest.TestCase):
         g=self.games()
         self.assertNotEqual(replay(g)["rows"][0]["elo3"],
                             replay(g,{1:1600.,2:1400.})["rows"][0]["elo3"])
+    def test_small_sample_is_shrunk_toward_verified_prior(self):
+        result=replay([Game(2025,1,1,2,85,60,"H","small")])
+        component=result["ratingComponents"][1]
+        self.assertGreater(component["rawElo"],component["reliableElo"])
+        self.assertGreater(component["reliableElo"],1500)
+        self.assertAlmostEqual(component["prior"],1500)
+        self.assertLess(component["reliability"],1)
+
+    def test_schedule_strength_uses_prior_opponent_ratings(self):
+        games=[Game(2025,d,11,21,80,60,"N",f"build-{d}") for d in range(1,9)]
+        games += [Game(2025,d,1,31,79,65,"N",f"weak-{d}") for d in range(9,17)]
+        games += [Game(2025,d,2,11,75,70,"N",f"strong-{d}") for d in range(9,17)]
+        result=replay(games)
+        self.assertGreater(result["ratingComponents"][2]["sos"],
+                           result["ratingComponents"][1]["sos"])
+
+    def test_historical_prior_uses_only_older_stable_ids(self):
+        from forecast.elo_v3 import historical_priors
+        old={2020:[Game(2020,d,1,2,85,60,"N",f"20-{d}") for d in range(1,134)],
+             2021:[Game(2021,d,1,2,80,70,"N",f"21-{d}") for d in range(1,134)],
+             2022:[Game(2022,d,2,1,80,70,"N",f"22-{d}") for d in range(1,134)]}
+        one=historical_priors(old,2023,{1,2,3},1)
+        multi=historical_priors(old,2023,{1,2,3},3)
+        self.assertNotIn(3,one)
+        self.assertNotIn(3,multi)
+        self.assertGreater(multi[1],one[1])
+
+    def test_paired_elo2_benchmark_never_mixes_fixtures(self):
+        from forecast.elo_v3 import _paired_cohort
+        with self.assertRaisesRegex(ValueError,"date/contest"):
+            _paired_cohort([{"contestId":"a","dayNum":5,"winnerId":1,
+                             "loserId":2,"winnerProbability":.6}],
+                           [{"contestId":"x","day":5,"y":1.,"elo3":.6}])
+
+    def test_exact_season_cohort_includes_elo2_and_multiyear(self):
+        from forecast.elo_v3 import evaluate
+        grouped={year:[Game(year,d,1,2,80,70,"N",f"{year}-{d}")
+                       for d in range(1,134)] for year in range(2020,2024)}
+        report=evaluate(grouped,years=(2023,))
+        self.assertEqual(report["games"],133)
+        self.assertEqual(report["elo2"]["games"],report["elo3"]["games"])
+        self.assertEqual(report["elo3"]["games"],report["elo3Multi"]["games"])
+        self.assertEqual(report["holdoutSeasons"],[2023])
+        self.assertIsNotNone(report["brierGain"])
+
     def test_no_historical_data_does_not_invent_accuracy(self):
         self.assertIsNone(evaluate({})["brierGain"])
 if __name__=="__main__":unittest.main()
