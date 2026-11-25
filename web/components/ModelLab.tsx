@@ -10,6 +10,7 @@ import ModelChampionship from "./ModelChampionship";
 import ForecastIntelligence from "./ForecastIntelligence";
 import ApPollComparison from "./ApPollComparison";
 import EloV2Comparison from "./EloV2Comparison";
+import EloV3Evidence from "./EloV3Evidence";
 
 const base=process.env.NEXT_PUBLIC_BASE_PATH||"";
 type Paired={pairedGames:number;pairedDates:number;baselineEloBrier:number|null;
@@ -102,6 +103,7 @@ export default function ModelLab({onOpenGames,onOpenAccuracy}:{onOpenGames?:()=>
    {!loaded?<p className="premium-empty" role="status">Reading source-linked experiment and archive reports…</p>:<>
    <ForecastIntelligence/>
    <EloV2Comparison/>
+   <EloV3Evidence/>
    <ApPollComparison/>
    <div className="ml-metrics">
       <div><small>OPPONENT-AWARE RETROSPECTIVE GAMES</small><strong>{opponent?.games?.toLocaleString()??"—"}</strong><span>Same-day-frozen experiments</span></div>
