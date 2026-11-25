@@ -44,7 +44,7 @@ jobs:
           out={"candidateProbability":round(p,7),"scheduledEasternDate":day,
                "sourceTeams":[teams[0]["name"],teams[1]["name"]],
                "researchOnly":True,**meta}
-          (src/"live-elo3-prospective-sanity.json").write_text(json.dumps(out,indent=2)+"\\n")
+          (src/"live-elo3-prospective-sanity.json").write_text(json.dumps(out,indent=2)+chr(10))
           print("Elo3 prospective current-source sanity:",out["sourceGames"],"games and",out["pairedBoxGames"],"boxes")
           PY
       - name: Evaluate source-backed date-frozen latent and ensemble models
