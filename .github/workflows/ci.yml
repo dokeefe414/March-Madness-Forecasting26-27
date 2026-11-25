@@ -16,6 +16,30 @@ jobs:
         env:
           PYTHONPATH: research
         run: python -m unittest discover -s research/tests -v
+      - name: Validate prospective Elo 3.0 diagnostics on actual immutable Git archive
+        env:
+          PYTHONPATH: research
+        run: |
+          python -m forecast.accuracy_research --ledger web/public/forecasts --out research/outputs/elo3-prospective-diagnostics.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path("research/outputs/elo3-prospective-diagnostics.json").read_text())
+          p=report["prospectiveElo3"]
+          d=p["diagnostics"]
+          assert d["eligibleOriginalFirstPicks"]==p["firstFrozenPicks"]
+          assert d["verifiedPairedFinals"]==p["verifiedPairedFinals"]
+          assert d["pendingOriginalFirstPicks"]==p["pendingOriginalFirstPicks"]
+          assert d["allCapturedShadowPredictions"]>=d["eligibleOriginalFirstPicks"]
+          assert d["afterLaunchMissingShadow"]<=d["afterLaunchOriginalFirstPicks"]
+          assert d["laterOnlyShadowEventsExcluded"]>=0
+          assert d["difference"]["differentWinnerPicks"]<=d["eligibleOriginalFirstPicks"]
+          assert d["overallVerified"]["games"]==d["verifiedPairedFinals"]
+          assert p["activePredictorReplaced"] is False
+          print("Live Elo3 evidence:",d["eligibleOriginalFirstPicks"],"first picks,",
+                d["verifiedPairedFinals"],"verified finals and",
+                d["laterOnlyShadowEventsExcluded"],"later-only excluded events")
+          PY
       - name: Fetch real season NCAA games and paired team boxes
         env:
           PYTHONPATH: research
