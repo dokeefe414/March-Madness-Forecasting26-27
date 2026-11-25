@@ -3,6 +3,7 @@ import {useEffect,useState} from "react";
 const base=process.env.NEXT_PUBLIC_BASE_PATH||"";
 type Score={games:number;brier:number|null;logLoss:number|null;accuracy:number|null;ece:number|null};
 type Year={season:number;games:number;elo2:Score;elo3:Score;elo3Multi:Score;gains:{elo3:number;elo3Multi:number}};
+type Current={retrievedAtUtc:string;currentRetrospective?:{status:string;sourceGames:number;pairedBoxEligibleGames:number;elo2:Score;elo3:Score;brierGain:number;warning:string}};
 type Report={schemaVersion:number;type:string;status:string;games:number;
   holdoutSeasons:number[];elo2?:Score;elo3?:Score;elo3Multi?:Score;
   brierGain?:number|null;multiYearBrierGain?:number|null;
@@ -12,10 +13,13 @@ const four=(x:number|null|undefined)=>x==null?"—":x.toFixed(4);
 const pct=(x:number|null|undefined)=>x==null?"—":(x*100).toFixed(1)+"%";
 export default function EloV3Evidence(){
  const [data,setData]=useState<Report|null>(null);
+ const [current,setCurrent]=useState<Current|null>(null);
  const [loaded,setLoaded]=useState(false);
- useEffect(()=>{let live=true;fetch(base+"/research/elo-v3-historical.json",{cache:"no-store"})
-   .then(r=>r.ok?r.json():null).then(d=>{if(live){setData(d);setLoaded(true)}})
-   .catch(()=>{if(live)setLoaded(true)});
+ useEffect(()=>{let live=true;
+   const get=(path:string)=>fetch(base+path,{cache:"no-store"})
+     .then(r=>r.ok?r.json():null).catch(()=>null);
+   Promise.all([get("/research/elo-v3-historical.json"),get("/current/elo-v3-teams.json")])
+     .then(([h,c])=>{if(live){setData(h);setCurrent(c);setLoaded(true)}});
    return()=>{live=false};
  },[]);
  const ready=data?.schemaVersion===2&&data.type==="elo3-versus-elo2-season-holdout"&&data.status==="ready";
@@ -42,6 +46,18 @@ export default function EloV3Evidence(){
        <div><b>LOG LOSS</b><span>Elo2 {four(data.elo2?.logLoss)} / Elo3 {four(data.elo3?.logLoss)}</span></div>
        <div><b>SEASON-BLOCK 95% CI</b><span>{interval?.map(x=>four(x)).join(" to ")||"Insufficient seasons"}</span></div>
      </div>
+     {current?.currentRetrospective&&<div className="ev2-content" aria-label="Current season Elo 2 and Elo 3 retrospective comparison">
+       <div className="ev2-section-top"><div><small>2026–27 / SOURCE-VERIFIED CURRENT SCORES</small>
+         <h3>Current season <em>shadow test.</em></h3>
+         <p>{current.currentRetrospective.sourceGames.toLocaleString()} identical games; {current.currentRetrospective.pairedBoxEligibleGames} had enough earlier paired boxes. Neutral priors for both models avoid unverified school histories.</p>
+       </div></div>
+       <div className="ev2-method-strip">
+         <div><b>ELO 2.0 BRIER</b><span>{four(current.currentRetrospective.elo2.brier)}</span></div>
+         <div><b>ELO 3.0 BRIER</b><span>{four(current.currentRetrospective.elo3.brier)}</span></div>
+         <div><b>PAIRED BRIER GAIN</b><span>{four(current.currentRetrospective.brierGain)}</span></div>
+       </div>
+       <p className="ev2-footnote">{current.currentRetrospective.warning}</p>
+     </div>}
      <div className="ev2-content"><div className="ev2-section-top"><div><small>FIXED YEARS / 2016–2025</small>
        <h3>Results by <em>season.</em></h3>
        <p>Do not treat a low training error or an unpaired matchup as proof of better predictions. Negative gains mean Elo 3.0 was worse.</p></div></div>

@@ -46,6 +46,17 @@ Measure Brier score, log loss, accuracy, ECE/calibration bins, early season thro
 
 The historical compact results source has **no paired box scores**. As a result this historical benchmark measures Elo 3.0's score-only + schedule + history configuration, *not* its live verified efficiency/Four Factors contribution. A future independent possession-rich historical corpus would be needed to test that part. No trained player/roster or AP-poll features are added without a validated source.
 
+## Current-season paired score-and-box shadow test
+
+The Elo 3.0 team artifact also reports `currentRetrospective`, a match of
+Elo 2.0 against Elo 3.0 on **the identical currently accepted 2027 games**.
+Both begin at 1500 because the historical Kaggle-to-NCAA team mapping is not
+authoritative. Elo 3.0 includes verified prior-date paired box efficiency
+and Four Factors where sample eligibility permits. The report discloses
+the count of games with enough earlier paired boxes and separately scores
+that eligible subset. These are reconstructed prior-date predictions,
+not archived first-published pretipoff forecasts, and are research only.
+
 ## CI / deployment gates
 
 - Tests: date embargo and same-day freeze, paired box identities, previous-year-only priors, schedule effect, small-sample shrinkage, identical Elo 2/3 game cohort, end-of-season component contract.

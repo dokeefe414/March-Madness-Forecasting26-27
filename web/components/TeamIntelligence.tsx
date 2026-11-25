@@ -61,7 +61,7 @@ export default function TeamIntelligence(){
      <div className="v12-team-title"><div><span className="feature-kicker">{team.conferenceVerified?team.conference:"CONFERENCE NOT VERIFIED"}</span><h2>{team.name}</h2><p>As of {data.retrievedAtUtc?new Date(data.retrievedAtUtc).toLocaleString("en-US",{timeZone:"America/New_York"}):"latest verified capture"} ET</p></div><button onClick={share}>{copied?"LINK COPIED ✓":"COPY TEAM LINK ↗"}</button></div>
      <div className="v12-stats">{[
        ["RECORD",team.wins+"–"+team.losses],
-       ["ELO 3.0 RATING",team.rating.toFixed(0)],
+       [elo3?"ELO 3.0 POWER":"ORIGINAL ELO (FALLBACK)",team.rating.toFixed(0)],
        ["FORM / TREND",(team.trend>=0?"+":"")+team.trend.toFixed(1)],
        ["AVG OPPONENT ELO AT GAME",team.opponentAverageEloAtGame?.toFixed(0)||team.opponentAverageElo?.toFixed(0)||"—"],
        ["LAST GAME ELO Δ",team.eloLastGameChange==null?"—":(team.eloLastGameChange>=0?"+":"")+team.eloLastGameChange.toFixed(1)]
