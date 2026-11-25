@@ -21,13 +21,18 @@ export default function TeamIntelligence(){
  const [selected,setSelected]=useState("");
  const [copied,setCopied]=useState(false);
  useEffect(()=>{let alive=true;Promise.all([
-   fetch(base+"/current/2027.json").then(r=>{if(!r.ok)throw Error("Current ratings unavailable");return r.json()}),
-   fetch(base+"/current/2027-games.json").then(r=>{if(!r.ok)throw Error("Current games unavailable");return r.json()}),
-   fetch(base+"/current/upcoming.json").then(r=>{if(!r.ok)throw Error("Schedule unavailable");return r.json()}),
-   fetch(base+"/current/elo-v3-teams.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw Error("Elo 3.0 team ratings unavailable");return r.json()})
- ]).then(([r,g,f,v3])=>{if(!alive)return;if(r.season!==2027||r.mode!=="current"||!Array.isArray(r.teams)||!Array.isArray(g.games)||!Array.isArray(f.games))throw Error("Source contracts mismatched");
-    if(v3.retrievedAtUtc!==r.retrievedAtUtc||!Array.isArray(v3.teams)||v3.teams.length!==r.teams.length)throw Error("Elo 3.0 source timestamp or team coverage mismatch");
-    setData(r);setGames(g.games);setFixtures(f.games);setElo3(v3);
+   fetch(base+"/current/2027.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw Error("Current ratings unavailable");return r.json()}),
+   fetch(base+"/current/2027-games.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw Error("Current games unavailable");return r.json()}),
+   fetch(base+"/current/upcoming.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw Error("Schedule unavailable");return r.json()}),
+   fetch(base+"/current/elo-v3-teams.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
+ ]).then(([r,g,f,v3])=>{if(!alive)return;
+    if(r.season!==2027||r.mode!=="current"||!Array.isArray(r.teams)||!Array.isArray(g.games)||!Array.isArray(f.games))throw Error("Source contracts mismatched");
+    const valid=v3&&v3.season===2027&&v3.model==="elo3"&&v3.retrievedAtUtc===r.retrievedAtUtc&&Array.isArray(v3.teams)
+      &&v3.teams.length===r.teams.length
+      &&new Set(v3.teams.map((t:{teamId:string})=>t.teamId)).size===r.teams.length
+      &&r.teams.every((t:Team)=>v3.teams.some((v:{teamId:string})=>v.teamId===t.teamId));
+    setData(r);setGames(g.games);setFixtures(f.games);setElo3(valid?v3:null);
+    setError(valid?"":"Elo 3.0 data is temporarily out of sync. Showing verified previous-model rankings until the sources match.");
     const requested=new URLSearchParams(window.location.search).get("team");
     setSelected(r.teams.some((t:Team)=>t.teamId===requested)?requested:r.teams[0]?.teamId||"");
  }).catch(e=>{if(alive)setError(String(e.message||e))});return()=>{alive=false}},[]);
@@ -43,10 +48,11 @@ export default function TeamIntelligence(){
  return <section className="content-section v12-team" aria-label="Current team intelligence center">
    <div className="v12-head"><span className="section-kicker">2026–27 / ELO 3.0 RESEARCH POWER RANKINGS</span><h1>TEAM <em>INTELLIGENCE.</em></h1>
      <p>Elo 3.0 power rankings from accepted 2027 scores, with source-verified efficiency where available. Previous-season priors are neutral until team IDs are independently verified. Historical game-change charts below still describe the original Elo.</p></div>
+   {data&&error&&<p className="premium-empty" role="status">{error}</p>}
    {!data?<p className="premium-empty" role={error?"alert":"status"}>{error||"Loading sourced team data…"}</p>:
    <div className="v12-team-layout">
     <aside className="v12-team-list"><label>FIND A PROGRAM<input aria-label="Search teams" placeholder="Search school..." value={search} onChange={e=>setSearch(e.target.value)}/></label>
-     <div className="v12-team-scroll">{teams.filter(t=>t.name.toLowerCase().includes(search.toLowerCase())).map(t=><button key={t.teamId} className={selected===t.teamId?"selected":""} onClick={()=>pick(t.teamId)} aria-pressed={selected===t.teamId}><strong>{t.name}</strong><span>#{t.rank} · {t.wins}–{t.losses} · {t.rating.toFixed(0)} Elo 3.0</span></button>)}</div>
+     <div className="v12-team-scroll">{teams.filter(t=>t.name.toLowerCase().includes(search.toLowerCase())).map(t=><button key={t.teamId} className={selected===t.teamId?"selected":""} onClick={()=>pick(t.teamId)} aria-pressed={selected===t.teamId}><strong>{t.name}</strong><span>#{t.rank} · {t.wins}–{t.losses} · {t.rating.toFixed(0)} {elo3?"Elo 3.0":"Elo"}</span></button>)}</div>
     </aside>
     {team&&<article className="v12-team-detail">
      <div className="v12-team-title"><div><span className="feature-kicker">{team.conferenceVerified?team.conference:"CONFERENCE NOT VERIFIED"}</span><h2>{team.name}</h2><p>As of {data.retrievedAtUtc?new Date(data.retrievedAtUtc).toLocaleString("en-US",{timeZone:"America/New_York"}):"latest verified capture"} ET</p></div><button onClick={share}>{copied?"LINK COPIED ✓":"COPY TEAM LINK ↗"}</button></div>
