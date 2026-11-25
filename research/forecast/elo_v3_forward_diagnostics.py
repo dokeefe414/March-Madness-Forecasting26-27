@@ -242,7 +242,7 @@ def derive(first:dict, snapshots:list[dict], outcomes:list[dict],
         "difference":{
             "meanPercentagePoints":round(
                 100*sum(row["absoluteGap"] for row in frozen)/n,3) if n else None,
-            "medianPercentagePoints":round(100*gaps[n//2],3) if n else None,
+            "medianPercentagePoints":round(50*(gaps[(n-1)//2]+gaps[n//2]),3) if n else None,
             "differentWinnerPicks":sum(row["differentWinner"] for row in frozen),
             "differenceAtLeast10pp":sum(row["absoluteGap"]>=.1 for row in frozen),
         },
