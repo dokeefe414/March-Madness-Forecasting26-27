@@ -1,3 +1,23 @@
+## Source-matched historical box-score benchmark — November 25, 2026
+
+A new pinned **2003+ men's Kaggle detailed game-box** experiment tests four
+identical-date Elo 3.0 replays: score-only, estimated possession efficiency,
+efficiency + observed Four Factors, and an extended box family including
+assists, steals, blocks, fouls and shooting rates. The games must match the
+repository's *separately pinned* compact scores by exact Kaggle season,
+day, teams, final scores and venue; mismatched/duplicate games are excluded,
+and each evaluated season needs ≥90% confirmed coverage. Possessions are
+**estimated**, not observed, and the outcome is presented as a non-promoted
+research experiment in Model Lab. The first source-matched 38,942-game
+historical comparison gave Brier **0.193204** (scores), **0.190746**
+(+ efficiency), **0.190645** (+ Four Factors), **0.190582**
+(+ supplementary boxes). Added Four Factors and extended stats improved
+Brier by ~0.000101 and ~0.000063 after their respective preceding stages.
+Source blob verification, SHA-256 evidence,
+tests, CI and Pages publication are included.
+
+[Detailed data contract and validation plan](docs/elo-v3-box-ablation.md).
+
 ## Elo 3.0 rating outlier audit and Elo 2.0 benchmark — November 25, 2026
 
 Elo 3.0 now publishes a **component-based team power rating** rather than

@@ -58,6 +58,16 @@ jobs:
         env:
           PYTHONPATH: research
         run: python -m forecast.elo_v3 --out research/outputs/elo3-historical.json
+      - name: Validate actual pinned Kaggle detailed boxes and independent Elo 3.0 ablations
+        env:
+          PYTHONPATH: research
+        run: python -m forecast.elo_v3_box_historical --out research/outputs/elo3-historical-box-ablation.json
+      - name: Store independently source-matched historical box feature audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: elo3-historical-box-ablation
+          path: research/outputs/elo3-historical-box-ablation.json
+          if-no-files-found: error
       - name: Upload Elo 3.0 historical comparison
         uses: actions/upload-artifact@v4
         with:
