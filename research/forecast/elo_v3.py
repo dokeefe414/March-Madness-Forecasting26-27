@@ -98,7 +98,9 @@ def replay(games,priors=None,paired_boxes=None):
             y=1. if g.winner<g.loser else 0.
             history.append({"day":day,"gap":gap if y else -gap,"y":y})
     return {"rows":rows,"pairedBoxes":matched,"boxEligible":eligible,
-            "finalHomeAdvantage":round(home,3)}
+            "finalHomeAdvantage":round(home,3),
+            "ratings":dict(ratings),"gamesPlayed":dict(counts),
+            "recentForm":dict(form),"boxGames":dict(boxcount)}
 
 def evaluate(grouped,years=HOLDOUT_YEARS):
     reports=[];allrows=[]

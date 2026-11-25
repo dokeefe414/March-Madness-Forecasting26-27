@@ -81,6 +81,10 @@ jobs:
         env:
           PYTHONPATH: research
         run: python -m forecast.live --model-report web/public/research/benchmark.json --out web/public/current/2027.json --games-out web/public/current/2027-games.json --box-out web/public/current/2027-box-games.json --espn-receipts-path web/public/forecasts/espn-final-receipts.json
+      - name: Publish source-matched Elo 3.0 team rankings
+        env:
+          PYTHONPATH: research
+        run: python -m forecast.elo_v3_current --games web/public/current/2027-games.json --ratings web/public/current/2027.json --boxes web/public/current/2027-box-games.json --out web/public/current/elo-v3-teams.json
       - name: Publish source-aligned Elo 2.0 shadow rankings and AP three-way research
         env:
           PYTHONPATH: research

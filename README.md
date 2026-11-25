@@ -1,3 +1,15 @@
+### Elo 3.0 current Teams tab (experimental)
+
+The Pages workflow now publishes a date-matched `current/elo-v3-teams.json`
+from the same accepted 2027 games and verified paired boxes as the source
+ratings. The **Teams** tab displays Elo 3.0 power ranks and ratings; older
+Elo game-change history is explicitly labeled as a reference. Elo 3.0 has
+neutral preseason priors until an authoritative cross-year identity exists,
+rather than unsafe provisional school-name carryover. The original production
+forecast/archive engine remains unchanged: **the Teams ranking migration does
+not silently rewrite upcoming predictions or bracket probabilities**.
+See `docs/elo-v3-research.md`.
+
 ## Elo 3.0 six-factor research challenger — November 25, 2026
 
 The new `research/forecast/elo_v3.py` implements bounded opponent-efficiency
