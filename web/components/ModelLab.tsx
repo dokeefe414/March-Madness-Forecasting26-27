@@ -102,13 +102,15 @@ export default function ModelLab({onOpenGames,onOpenAccuracy}:{onOpenGames?:()=>
         <p>{health?.message||"Archive health unavailable — no false accuracy claim."}</p>
         <small>ARCHIVE {health?.status?.replaceAll("-"," ").toUpperCase()||"NOT VERIFIED"}</small>
       </aside></div>
-   {!loaded?<p className="premium-empty" role="status">Reading source-linked experiment and archive reports…</p>:<>
+   {/* Self-contained research panels fetch their own sources. Do not hide them
+       behind the legacy summary's seven unrelated feed requests. */}
    <ForecastIntelligence/>
    <EloV2Comparison/>
    <EloV3Evidence/>
    <EloV3BoxEvidence/>
    <EloV3ProspectiveEvidence/>
    <ApPollComparison/>
+   {!loaded?<p className="premium-empty" role="status">Reading source-linked experiment and archive reports…</p>:<>
    <div className="ml-metrics">
       <div><small>OPPONENT-AWARE RETROSPECTIVE GAMES</small><strong>{opponent?.games?.toLocaleString()??"—"}</strong><span>Same-day-frozen experiments</span></div>
       <div><small>KALMAN RETROSPECTIVE GAMES</small><strong>{state?.evaluatedGames?.toLocaleString()??"—"}</strong><span>Two Gaussian variants / identical fixtures</span></div>
