@@ -29,6 +29,7 @@ class CurrentElo3Tests(unittest.TestCase):
         self.assertEqual(result["currentRetrospective"]["elo3"]["games"],1)
         self.assertEqual(result["currentRetrospective"]["pairedBoxEligibleGames"],0)
         self.assertIn("small-sample",result["top25OutlierAudit"][0]["flags"])
+        self.assertIn("sourceAdjustedNet100",result["top25OutlierAudit"][0])
 
     def test_reject_timestamp_mismatch(self):
         games,ratings,boxes=self.sources()

@@ -67,14 +67,20 @@ def build(games,ratings,boxes):
                      "record":str(original["wins"])+"-"+str(original["losses"]),
                      "sourceRating":original["rating"],
                      "boxGames":report["boxGames"].get(tid,0),
-                     "fourFactorGames":report["fourFactorGames"].get(tid,0)})
+                     "fourFactorGames":report["fourFactorGames"].get(tid,0),
+                     "divisionIConfirmed":original.get("divisionIConfirmed"),
+                     "sourceAdjustedNet100":original.get("adjNet100"),
+                     "sourceOpponentEloAtGame":original.get("opponentAverageEloAtGame")})
     if len(rows)!=len(ratings["teams"]):raise ValueError("Team coverage mismatch")
     rows.sort(key=lambda t:(-t["rating"],t["name"]))
     for i,row in enumerate(rows,1):row["rank"]=i
     watch=[{"rank":row["rank"],"team":row["name"],"games":row["games"],
             "sosAdjustment":row["components"]["sos"],"reliability":row["components"]["reliability"],
             "boxGames":row["boxGames"],"fourFactorGames":row["fourFactorGames"],
-            "flags":([ "small-sample" ] if row["games"]<6 else [])+
+            "sourceAdjustedNet100":row["sourceAdjustedNet100"],
+            "sourceOpponentEloAtGame":row["sourceOpponentEloAtGame"],
+            "divisionIConfirmed":row["divisionIConfirmed"],
+            "flags":([ "small-sample" ] if row["games"]<10 else [])+
                     ([ "weak-previous-opponents" ] if row["components"]["sos"]<-8 else [])}
            for row in rows[:25]]
     return {"schemaVersion":1,"season":2027,"model":"elo3","status":"current-research-primary-teams",

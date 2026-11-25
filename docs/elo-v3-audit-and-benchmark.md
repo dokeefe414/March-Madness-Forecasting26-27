@@ -17,7 +17,13 @@ For a team at date T, Elo 3.0 constructs the same strength used for the displaye
 - **Efficiency:** for three or more verified paired team game boxes, a capped ±24 score from opponent-aware *observed* offensive–defensive efficiency with an extra 500-possession denominator to limit noise.
 - **Four Factors:** observed effective field goal rate, turnovers per verified possessions, offensive rebound share using the opponent's defensive rebounds, free-throw attempts per field goal attempt. Minimum three independently paired boxes; a fixed neutral reference and eight-game shrinkage; capped ±12. No fabricated steals, blocks or advanced possession data.
 
-**Power rating** = reliable Elo + SOS + form + verified efficiency + verified Four Factors. The generator saves each part in `current/elo-v3-teams.json` under `teams[].components`, along with `underlyingElo`, `games`, `boxGames`, and `fourFactorGames`. `top25OutlierAudit` flags unusually few games or weak previous opponents in the first 25 ranks so an Oregon State-style anomaly can be investigated. A flag does not automatically change a rating.
+**Power rating** = reliable Elo + SOS + form + verified efficiency + verified Four Factors. The generator saves each part in `current/elo-v3-teams.json` under `teams[].components`, along with `underlyingElo`, `games`, `boxGames`, and `fourFactorGames`. `top25OutlierAudit` flags unusually few games or weak previous opponents in the first 25 ranks so an Oregon State-style anomaly can be investigated. The audit flags fewer than ten games as an early-season limited sample,
+and separately surfaces verified Division I status, as-of source-adjusted
+net efficiency, and recorded opponent pregame Elo for transparent comparison
+with the Elo 3.0 decomposition. A flag does not automatically change a rating.
+In the November 25 source snapshot, the provider had 1,331 complete paired
+possession boxes but **zero** complete verified Four Factor boxes, so all
+Four Factor contributions were zero rather than imputed.
 
 These are fixed research coefficients; overusing correlated data can degrade real forecasts. Claims of precision from missing boxes or unverified player stats are forbidden.
 
