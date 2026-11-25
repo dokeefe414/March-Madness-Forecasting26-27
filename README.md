@@ -20,6 +20,19 @@ March Forecast is an open-source NCAA men's basketball forecasting and model-eva
 
 ---
 
+## Date-frozen efficiency + offensive/defensive latent research — November 25, 2026
+
+A new source-joined, two-sided possession feature benchmark uses **only
+prior-date NCAA team boxes** to update separate offense and defense latent
+strengths. It compares the latent probabilities, a matched simple Elo baseline
+and an earlier-date-weighted ensemble on exactly the same eligible games,
+reporting missing coverage and abstentions rather than imputing box scores.
+It is research-only and **does not** claim to replace production Elo.
+Run `python -m research.forecast.efficiency_latent` after preparing the
+source-game-box artifact, and
+`python -m unittest research.tests.test_efficiency_latent`.
+See [method, data contracts, limitations and scientific gates](docs/efficiency-latent-research.md).
+
 ## Model strengthening: promotion-readiness audit — November 25, 2026
 
 A new read-only, fail-closed model readiness report evaluates each archived
