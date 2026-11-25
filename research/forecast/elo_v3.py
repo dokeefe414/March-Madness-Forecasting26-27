@@ -32,6 +32,7 @@ def replay(games,priors=None,paired_boxes=None):
     form=defaultdict(float);counts=defaultdict(int)
     # Two-sided, source-verified ORTG/DRTG/poss; no fabricated data.
     off=defaultdict(float);defence=defaultdict(float);poss=defaultdict(float);boxcount=defaultdict(int)
+    factor_sum=defaultdict(float);factor_count=defaultdict(int);opponent_sum=defaultdict(float)
     home=65.;history=[];rows=[];matched=eligible=0
     for day,group in groupby(games,key=lambda g:g.day_num):
         batch=list(group)
@@ -55,7 +56,17 @@ def replay(games,priors=None,paired_boxes=None):
             if boxcount[w]>=3 and boxcount[l]>=3:
                 netw=(off[w]-defence[w])/(poss[w]+500.)*100.
                 netl=(off[l]-defence[l])/(poss[l]+500.)*100.
-                efficiency=max(-45.,min(45.,2.*(netw-netl)))
+                # Adjust observed efficiency for prior opponent strength;
+                # 1500 is neutral, and opponent ratings are sampled pregame.
+                sosw=(opponent_sum[w]-1500.*boxcount[w])/(boxcount[w]+8.)
+                sosl=(opponent_sum[l]-1500.*boxcount[l])/(boxcount[l]+8.)
+                efficiency=max(-45.,min(45.,2.*(netw-netl)+.15*(sosw-sosl)))
+                # Four-factor information is independent only when source
+                # supplies both sides; shrink heavily to avoid double counting.
+                if factor_count[w]>=3 and factor_count[l]>=3:
+                    fw=factor_sum[w]/(factor_count[w]+8.)
+                    fl=factor_sum[l]/(factor_count[l]+8.)
+                    efficiency=max(-45.,min(45.,efficiency+25.*(fw-fl)))
                 eligible+=1
             gap=ratings[w]-ratings[l]+venue+recency+efficiency
             raw=probability(gap)
@@ -80,11 +91,13 @@ def replay(games,priors=None,paired_boxes=None):
                 home_won=g.winner_location=="H"
                 expected_home=raw if home_won else 1.-raw
                 home=max(15.,min(110.,home+1.5*((1. if home_won else 0.)-expected_home)))
+            before_w=ratings[w]-delta
+            before_l=ratings[l]+delta
             box=(paired_boxes or {}).get(g.contest_id)
             if box is not None:
                 if (box.get("winnerId")!=w or box.get("loserId")!=l or box.get("dayNum")!=day):
                     raise ValueError("Paired-box identity mismatch")
-                for team,side in ((w,"winner"),(l,"loser")):
+                for team,side,opponent in ((w,"winner",before_l),(l,"loser",before_w)):
                     b=box[side]
                     if any(type(b.get(k)) not in (float,int) or not math.isfinite(b[k]) or
                            not (30<=b[k]<=180 if k=="poss" else 25<=b[k]<=250)
@@ -93,6 +106,19 @@ def replay(games,priors=None,paired_boxes=None):
                     off[team]+=b["off"]*b["poss"]/100.
                     defence[team]+=b["def"]*b["poss"]/100.
                     poss[team]+=b["poss"];boxcount[team]+=1
+                    opponent_sum[team]+=opponent
+                    f=b.get("factors")
+                    other=box["loser" if side=="winner" else "winner"].get("factors")
+                    if f is not None and other is not None:
+                        # Exact source four factors: eFG, turnover rate,
+                        # offensive rebound share and free-throw rate.
+                        if f["fga"]>0 and f["fgm"]<=f["fga"] and f["fg3m"]<=f["fgm"]:
+                            efg=(f["fgm"]+.5*f["fg3m"])/f["fga"]
+                            tov=f["tov"]/max(30.,b["poss"])
+                            orb=f["orb"]/max(1.,f["orb"]+other["drb"])
+                            ftr=f["fta"]/f["fga"]
+                            factor_sum[team]+=efg-tov+.2*orb+.1*ftr
+                            factor_count[team]+=1
                 matched+=1
         for g,gap,raw in frozen:
             y=1. if g.winner<g.loser else 0.
@@ -100,7 +126,8 @@ def replay(games,priors=None,paired_boxes=None):
     return {"rows":rows,"pairedBoxes":matched,"boxEligible":eligible,
             "finalHomeAdvantage":round(home,3),
             "ratings":dict(ratings),"gamesPlayed":dict(counts),
-            "recentForm":dict(form),"boxGames":dict(boxcount)}
+            "recentForm":dict(form),"boxGames":dict(boxcount),
+            "fourFactorGames":dict(factor_count)}
 
 def evaluate(grouped,years=HOLDOUT_YEARS):
     reports=[];allrows=[]

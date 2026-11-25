@@ -1,3 +1,5 @@
+**Elo 3.0 statistical coverage:** [Verified features and limitations](docs/elo-v3-stats.md).
+
 ### Elo 3.0 current Teams tab (experimental)
 
 The Pages workflow now publishes a date-matched `current/elo-v3-teams.json`

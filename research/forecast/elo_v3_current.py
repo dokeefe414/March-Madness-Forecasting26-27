@@ -17,16 +17,20 @@ def build(games,ratings,boxes):
     records=games["games"]
     if len(records)!=ratings["regularSeasonGames"]:raise ValueError("Scored game count differs")
     fixtures,names=_to_games(records)
+    if not fixtures:raise ValueError("No accepted scored games")
     # Current source box pairs use exact source contest IDs and full school
     # names. A mismatch is an error, not an inferred alias.
     lookup={g.contest_id:g for g in fixtures}
+    records_by_id={str(g["id"]):g for g in records}
     pairs={}
     for item in boxes.get("games",[]):
         key=str(item["id"])
         g=lookup.get(key)
         if g is None:raise ValueError("Unmatched paired box contest")
         home_won=(names[g.winner]==item["home"])
-        if names[g.winner] not in (item["home"],item["away"]) or names[g.loser] not in (item["home"],item["away"]):
+        if (names[g.winner] not in (item["home"],item["away"]) or
+            names[g.loser] not in (item["home"],item["away"]) or
+            item["date"]!=records_by_id[key]["date"]):
             raise ValueError("Paired box school identity mismatch")
         winner=item["homeBox"] if home_won else item["awayBox"]
         loser=item["awayBox"] if home_won else item["homeBox"]
@@ -44,7 +48,9 @@ def build(games,ratings,boxes):
                      "games":report["gamesPlayed"].get(tid,0),
                      "record":str(original["wins"])+"-"+str(original["losses"]),
                      "sourceRating":original["rating"],
-                     "boxGames":report["boxGames"].get(tid,0)})
+                     "boxGames":report["boxGames"].get(tid,0),
+                     "fourFactorGames":report["fourFactorGames"].get(tid,0)})
+    if len(rows)!=len(ratings["teams"]):raise ValueError("Team coverage mismatch")
     rows.sort(key=lambda t:(-t["rating"],t["name"]))
     for i,row in enumerate(rows,1):row["rank"]=i
     return {"schemaVersion":1,"season":2027,"model":"elo3","status":"current-research-primary-teams",
