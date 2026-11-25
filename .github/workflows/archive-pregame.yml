@@ -51,7 +51,7 @@ jobs:
       - name: Build source-verified, timestamped current ratings
         env:
           PYTHONPATH: research
-        run: python -m forecast.live --out web/public/current/2027.json --games-out web/public/current/2027-games.json --save-espn-receipts --espn-receipts-path web/public/forecasts/espn-final-receipts.json
+        run: python -m forecast.live --out web/public/current/2027.json --games-out web/public/current/2027-games.json --box-out web/public/current/2027-box-games.json --save-espn-receipts --espn-receipts-path web/public/forecasts/espn-final-receipts.json
       # Real polls may tie at a ranking (e.g., two No.18 teams); the parser
       # preserves official competition-style positions and frozen week history.
       - name: Capture newly published AP Top 25 against pre-week Elo without changing forecasts
@@ -77,7 +77,7 @@ jobs:
       - name: Snapshot future ESPN fixtures only and settle past NCAA finals
         env:
           PYTHONPATH: research
-        run: python -m forecast.snapshot --ratings web/public/current/2027.json --games web/public/current/2027-games.json --online-model web/public/current/2027-online-model.json --state-space web/public/current/2027-state-space.json --opponent-model web/public/current/2027-opponents.json --ensemble-model web/public/current/forward-ensemble.json --out-dir web/public/forecasts
+        run: python -m forecast.snapshot --ratings web/public/current/2027.json --games web/public/current/2027-games.json --online-model web/public/current/2027-online-model.json --state-space web/public/current/2027-state-space.json --opponent-model web/public/current/2027-opponents.json --ensemble-model web/public/current/forward-ensemble.json --elo3-boxes web/public/current/2027-box-games.json --out-dir web/public/forecasts
       - name: Audit source timestamps, forecast buffer and score arithmetic
         env:
           PYTHONPATH: research

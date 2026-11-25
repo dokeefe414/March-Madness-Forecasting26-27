@@ -79,6 +79,37 @@ def audit_ledger(folder: Path) -> dict:
                     candidate=float(pred[field])
                     if not math.isfinite(candidate) or not 0<candidate<1:
                         raise ValueError(f"Unscorable frozen challenger probability: {key}")
+            # Elo3 candidate can only be scored with matching first-pick
+            # metadata, prior-date cutoff, and finite original probability.
+            e3=pred.get("elo3HomeWinProbability")
+            evidence=pred.get("elo3Research")
+            if (e3 is None)!=(evidence is None):
+                raise ValueError(f"Elo3 probability/provenance missing pair: {key}")
+            if e3 is not None:
+                if type(e3) not in (int,float) or not math.isfinite(e3) or not 0<e3<1:
+                    raise ValueError(f"Invalid frozen Elo3 probability: {key}")
+                if not isinstance(evidence,dict) or evidence.get("modelVersion")!="elo3-prospective-shadow-v1":
+                    raise ValueError(f"Invalid Elo3 research model identity: {key}")
+                if (evidence.get("ratingRetrievedAtUtc")!=snap["ratingRetrievedAtUtc"] or
+                    evidence.get("boxRetrievedAtUtc")!=snap["ratingRetrievedAtUtc"] or
+                    evidence.get("ratingCutoffExclusive")!=pred["scheduledEasternDate"] or
+                    evidence.get("preseasonPriorPolicy")!="neutral-2027-until-verified-crossyear-ID"):
+                    raise ValueError(f"Unmatched Elo3 source metadata or date: {key}")
+                trained=evidence.get("trainedThroughDate")
+                if trained is not None and (not isinstance(trained,str) or
+                                            trained>=pred["scheduledEasternDate"]):
+                    raise ValueError(f"Elo3 training leaks forecast date: {key}")
+                for field in ("sourceGames","pairedBoxGames","fourFactorTeamGames"):
+                    value=evidence.get(field)
+                    if type(value) is not int or value<0:
+                        raise ValueError(f"Invalid Elo3 source coverage metadata: {key}")
+                if (evidence["pairedBoxGames"]>evidence["sourceGames"] or
+                    (trained is None and evidence["sourceGames"]>0)):
+                    raise ValueError(f"Inconsistent Elo3 pregame evidence: {key}")
+                for field,lo,hi in (("temperature",.5,2.0),("homeAdvantage",0.,150.)):
+                    value=evidence.get(field)
+                    if type(value) not in (float,int) or not math.isfinite(value) or not lo<=value<=hi:
+                        raise ValueError(f"Invalid Elo3 learned setting: {key}")
             # New v1.9 score shadows are optional, but when a forecast is
             # published the frozen source-backed points must be internally
             # consistent. Earlier snapshots contain no score forecast.

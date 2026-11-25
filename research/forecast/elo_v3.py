@@ -62,6 +62,20 @@ def metrics(rows, key):
             "calibrationBins": [[c, round(p, 4), round(y, 4)] for c, p, y in bins]}
 
 
+def _asof_temperature(history):
+    """Calibrate only on games from dates already in the replay.
+
+    Used both at historical game dates and for brand-new pretipoff Elo 3.0
+    shadow snapshots. Never fit temperature on the forecast day's result.
+    """
+    if len(history) < 120 or len({r["day"] for r in history}) < 15:
+        return 1.
+    temperatures = (.8, .9, 1., 1.1, 1.2, 1.35)
+    return min(temperatures, key=lambda t: (
+        sum((probability(r["gap"], t) - r["y"]) ** 2 for r in history)
+        / len(history) + .0003 * (t - 1.) ** 2, abs(t - 1.)))
+
+
 def _four_factor_residual(box, other):
     f, opponent = box.get("factors"), other.get("factors")
     if f is None or opponent is None:
@@ -125,6 +139,7 @@ def replay(games, priors=None, paired_boxes=None, stats_variant="fourFactors"):
                     max(g.winner, g.loser), g.contest_id))
     if not games:
         return {"rows": [], "pairedBoxes": 0, "boxEligible": 0,
+                "nextForecastTemperature":1., "finalHomeAdvantage":65.,
                 "ratings": {}, "powerRatings": {}, "ratingComponents": {},
                 "gamesPlayed": {}, "recentForm": {}, "boxGames": {}, "fourFactorGames": {}}
     if len({g.season for g in games}) != 1:
@@ -189,13 +204,7 @@ def replay(games, priors=None, paired_boxes=None, stats_variant="fourFactors"):
             raise ValueError("Invalid scored game")
         # Temperature only fitted on previous dates. This is NOT a prospective
         # out-of-sample hyperparameter search.
-        temperatures = (.8, .9, 1., 1.1, 1.2, 1.35)
-        if len(history) >= 120 and len({h["day"] for h in history}) >= 15:
-            temp = min(temperatures, key=lambda t: (
-                sum((probability(h["gap"], t) - h["y"]) ** 2 for h in history) /
-                len(history) + .0003 * (t - 1.) ** 2, abs(t - 1.)))
-        else:
-            temp = 1.
+        temp = _asof_temperature(history)
         frozen = []
         for g in batch:
             w, l = g.winner, g.loser
@@ -273,6 +282,7 @@ def replay(games, priors=None, paired_boxes=None, stats_variant="fourFactors"):
     components = {team: strength(team) for team in sorted(participants)}
     return {"rows": rows, "pairedBoxes": matched, "boxEligible": eligible,
             "finalHomeAdvantage": round(home, 3),
+            "nextForecastTemperature": _asof_temperature(history),
             "ratings": {t: ratings[t] for t in participants},
             "powerRatings": {t: v["power"] for t, v in components.items()},
             "ratingComponents": components, "gamesPlayed": dict(counts),

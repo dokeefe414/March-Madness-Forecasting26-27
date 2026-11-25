@@ -12,6 +12,7 @@ import ApPollComparison from "./ApPollComparison";
 import EloV2Comparison from "./EloV2Comparison";
 import EloV3Evidence from "./EloV3Evidence";
 import EloV3BoxEvidence from "./EloV3BoxEvidence";
+import EloV3ProspectiveEvidence from "./EloV3ProspectiveEvidence";
 
 const base=process.env.NEXT_PUBLIC_BASE_PATH||"";
 type Paired={pairedGames:number;pairedDates:number;baselineEloBrier:number|null;
@@ -106,6 +107,7 @@ export default function ModelLab({onOpenGames,onOpenAccuracy}:{onOpenGames?:()=>
    <EloV2Comparison/>
    <EloV3Evidence/>
    <EloV3BoxEvidence/>
+   <EloV3ProspectiveEvidence/>
    <ApPollComparison/>
    <div className="ml-metrics">
       <div><small>OPPONENT-AWARE RETROSPECTIVE GAMES</small><strong>{opponent?.games?.toLocaleString()??"—"}</strong><span>Same-day-frozen experiments</span></div>

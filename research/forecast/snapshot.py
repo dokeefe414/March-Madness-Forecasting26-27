@@ -28,6 +28,7 @@ from .retrain import validate_for_pick, probability as online_probability
 from .forward_ensemble import candidate as ensemble_candidate, validate_for_fixture as validate_ensemble
 from .performance import summarize_forward
 from .score_shadow import score_shadow
+from .elo_v3_shadow import Elo3Pregame
 
 ESPN_BASE = "https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard"
 LOCAL = ZoneInfo("America/New_York")
@@ -158,7 +159,8 @@ def forecast_scheduled(scoreboards: list[dict], ratings: dict,
                        state_space: dict | None = None,
                        opponent_model: dict | None = None,
                        ensemble_model: dict | None = None,
-                       scored_games: list[dict] | None = None) -> dict:
+                       scored_games: list[dict] | None = None,
+                       elo3_shadow: Elo3Pregame | None = None) -> dict:
     """Strict as-of future-start verification and source identity matching."""
     generated_at = generated_at.astimezone(timezone.utc)
     retrieved = parse_time(ratings["retrievedAtUtc"])
@@ -166,6 +168,8 @@ def forecast_scheduled(scoreboards: list[dict], ratings: dict,
         raise ValueError("rating source snapshot cannot be retrieved in the future")
     if ratings.get("mode") != "current" or ratings.get("season") != 2027:
         raise ValueError("wrong season or model mode")
+    if elo3_shadow is not None and elo3_shadow.stamp != ratings["retrievedAtUtc"]:
+        raise ValueError("Elo3 pretipoff source stamp differs from active Elo")
     name_index: dict[str, list[dict]] = {}
     for team in ratings["teams"]:
         name_index.setdefault(canonical(team["name"]), []).append(team)
@@ -301,6 +305,12 @@ def forecast_scheduled(scoreboards: list[dict], ratings: dict,
                         else "source-aware margin Elo v2.1"
                         if elo_version == "source-aware-game-elo-v1"
                         else "as-of regular-season Elo")
+            # Frozen shadow forecast uses only source-matched NCAA final scores
+            # and paired boxes from DATES BEFORE the scheduled local day.
+            # It never becomes the active or automatically promoted model.
+            elo3_result = (elo3_shadow.predict(home["name"],away["name"],
+                                               future_eastern_day,neutral)
+                           if elo3_shadow is not None else None)
             unique[event_id] = {
                 "eventId": event_id, "scheduledStartUtc": starts.isoformat().replace("+00:00", "Z"),
                 "scheduledEasternDate": starts.astimezone(LOCAL).date().isoformat(),
@@ -311,6 +321,8 @@ def forecast_scheduled(scoreboards: list[dict], ratings: dict,
                 "neutralSite": neutral, "model": model_name,
                 "ratingMethodVersion":elo_version,
                 "baselineHomeWinProbability":round(baseline,7),
+                "elo3HomeWinProbability":round(elo3_result[0],7) if elo3_result else None,
+                "elo3Research":elo3_result[1] if elo3_result else None,
                 "challengerHomeWinProbability":round(challenger,7) if challenger is not None else None,
                 "stateSpaceHomeWinProbability":round(state_probability,7) if state_probability is not None else None,
                 "opponentAdjustedHomeWinProbability":round(opponent_probability,7) if opponent_probability is not None else None,
@@ -345,6 +357,7 @@ def forecast_scheduled(scoreboards: list[dict], ratings: dict,
             "ESPN scheduled start may change; this records its as-of state, not proof of the actual tip-off.",
             "Every actual and experimental probability is frozen before the listed start; challenger and state-space scenarios are not automatically promoted.",
             "Future score projections are independently frozen research estimates. Older snapshots are never retroactively populated.",
+            "Elo 3.0 probabilities are research-only, strictly trained on prior dates and not backfilled to earlier first picks.",
             "Only forecasts generated before reported start (with 15-minute buffer) are stored.",
         ],
     }
@@ -573,6 +586,8 @@ def write_ledger(out_dir: Path, snapshot: dict, finals: list[dict], now: datetim
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--ratings", type=Path, default=Path("web/public/current/2027.json"))
+    parser.add_argument("--elo3-boxes", type=Path,
+                        help="Same-source 2027 paired boxes; activates immutable Elo3 pretipoff challenger")
     parser.add_argument("--games", type=Path, default=Path("web/public/current/2027-games.json"),
                         help="Exact accepted scored games from the same source retrieval as ratings")
     parser.add_argument("--online-model", type=Path, help="Current-source 2027 chronologically retrained model JSON")
@@ -590,6 +605,9 @@ def main() -> None:
         games_file.get("retrievedAtUtc") != ratings.get("retrievedAtUtc")):
         raise ValueError("Archived score ledger and ratings retrieval mismatch")
     scored_games = games_file["games"]
+    elo3_shadow = (Elo3Pregame(ratings,games_file,
+                   json.loads(args.elo3_boxes.read_text(encoding="utf-8")))
+                   if args.elo3_boxes else None)
     online_model = json.loads(args.online_model.read_text(encoding="utf-8")) if args.online_model else None
     state_space = json.loads(args.state_space.read_text(encoding="utf-8")) if args.state_space else None
     opponent_model = json.loads(args.opponent_model.read_text(encoding="utf-8")) if args.opponent_model else None
@@ -637,7 +655,8 @@ def main() -> None:
         schedule_changes = detect_schedule_changes(all_old, list(by_date.values()))
     forecast = forecast_scheduled(scoreboards, ratings, now, online_model=online_model,
                                   state_space=state_space, opponent_model=opponent_model,
-                                  ensemble_model=ensemble_model, scored_games=scored_games)
+                                  ensemble_model=ensemble_model, scored_games=scored_games,
+                                  elo3_shadow=elo3_shadow)
     if args.finals_csv:
         finals_text = args.finals_csv.read_text(encoding="utf-8-sig")
     else:
