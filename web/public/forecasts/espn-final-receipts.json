@@ -6827,6 +6827,19 @@
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
+      "away": "St. Bonaventure",
+      "awayEspnTeamId": "179",
+      "awayScore": 71,
+      "date": "2026-11-25",
+      "eventId": "401927399",
+      "firstObservedAtUtc": "2026-11-25T17:55:44.428806Z",
+      "home": "Belmont",
+      "homeEspnTeamId": "2057",
+      "homeScore": 68,
+      "scheduledStartUtc": "2026-11-25T15:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
       "away": "Mercer",
       "awayEspnTeamId": "2382",
       "awayScore": 84,
