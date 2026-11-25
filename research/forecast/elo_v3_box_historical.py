@@ -36,7 +36,7 @@ STATS = ("FGM","FGA","FGM3","FGA3","FTM","FTA","OR","DR","Ast","TO","Stl","Blk",
 
 
 def _git_blob_sha(raw:bytes)->str:
-    return hashlib.sha1(b"blob " + str(len(raw)).encode("ascii") + b"\\0" + raw).hexdigest()
+    return hashlib.sha1(b"blob " + str(len(raw)).encode("ascii") + bytes([0]) + raw).hexdigest()
 
 
 def download_detailed()->bytes:
@@ -306,7 +306,7 @@ def main():
                 "source":DETAIL_URL,"automaticPromotion":False,
                 "reason":f"Pinned historical box source unreachable: {type(exc).__name__}: {str(exc)[:160]}"}
     args.out.parent.mkdir(parents=True,exist_ok=True)
-    args.out.write_text(json.dumps(report,indent=2,sort_keys=True)+"\\n",encoding="utf-8")
+    args.out.write_text(json.dumps(report,indent=2,sort_keys=True)+chr(10),encoding="utf-8")
     print(json.dumps({k:report.get(k) for k in
           ("status","eligiblePairedGames","holdoutSeasons","brierGainVsScoreOnly","reason")},indent=2))
 
