@@ -44,7 +44,9 @@ def build(games,ratings,boxes):
         original=source.get(name)
         if original is None:raise ValueError("Missing team from source ratings")
         rows.append({"teamId":original["teamId"],"name":name,
-                     "rating":round(report["ratings"].get(tid,1500.),2),
+                     "rating":round(report["powerRatings"].get(tid,1500.),2),
+                     "underlyingElo":round(report["ratings"].get(tid,1500.),2),
+                     "components":report["ratingComponents"][tid],
                      "games":report["gamesPlayed"].get(tid,0),
                      "record":str(original["wins"])+"-"+str(original["losses"]),
                      "sourceRating":original["rating"],
@@ -53,10 +55,18 @@ def build(games,ratings,boxes):
     if len(rows)!=len(ratings["teams"]):raise ValueError("Team coverage mismatch")
     rows.sort(key=lambda t:(-t["rating"],t["name"]))
     for i,row in enumerate(rows,1):row["rank"]=i
+    watch=[{"rank":row["rank"],"team":row["name"],"games":row["games"],
+            "sosAdjustment":row["components"]["sos"],"reliability":row["components"]["reliability"],
+            "boxGames":row["boxGames"],"fourFactorGames":row["fourFactorGames"],
+            "flags":([ "small-sample" ] if row["games"]<6 else [])+
+                    ([ "weak-previous-opponents" ] if row["components"]["sos"]<-8 else [])}
+           for row in rows[:25]]
     return {"schemaVersion":1,"season":2027,"model":"elo3","status":"current-research-primary-teams",
             "retrievedAtUtc":stamp,"lastGameDate":ratings["lastGameDate"],
             "sourceGames":len(fixtures),"teams":rows,
             "pairedBoxes":report["pairedBoxes"],"boxEligible":report["boxEligible"],
+            "top25OutlierAudit":watch,
+            "ratingMethod":"Date-frozen, reliability-adjusted Elo + previous-opponent SOS + recent form + verified possession efficiency and Four Factors",
             "homeAdvantage":report["finalHomeAdvantage"],
             "previousSeasonPriors":"neutral-until-authoritative-cross-year-ID",
             "limitations":["Elo 3.0 research ratings, not a proven better forward predictor.",
