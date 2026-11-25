@@ -75,8 +75,8 @@ export default function EloV3ProspectiveEvidence(){
      <div><small>AWAITING VERIFIED FINALS</small><strong>{p.pendingOriginalFirstPicks.toLocaleString()}</strong><span>Pending is never a prediction loss</span></div>
      <div><small>DATE-BLOCK BRIER GAIN</small><strong>{num(c?.brierGain,6)}</strong><span>Positive favors Elo 3.0, negative favors control</span></div>
     </div>
-    {p.firstFrozenPicks===0?<p className="ev2-empty" role="status">The recording process has been configured, but no new earliest Elo 3.0 forecasts have been archived yet. Historical results cannot fill this gap.</p>:
-    <div className="ev2-content">
+    {p.firstFrozenPicks===0&&<p className="ev2-empty" role="status">Elo 3.0 recordings may exist, but none qualifies as an original first-published Elo 3.0 pick yet. Historical scores or later-only forecasts cannot fill this gap.</p>}
+    {(p.firstFrozenPicks>0||d)&&<div className="ev2-content">
       <div className="ev2-section-top"><div><small>EXACT SAME FIRST-FROZEN EVENT IDS</small>
        <h3>Game-day <em>scoreboard.</em></h3>
        <p>These figures remain limited until enough different dates and genuinely verified finals accumulate. Missing candidates and unverified games are excluded, not counted as misses.</p>
