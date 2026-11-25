@@ -6,7 +6,8 @@ source-local and have neutral priors until authoritative cross-year IDs exist.
 import argparse,json
 from pathlib import Path
 from .elo_v2_current import _to_games
-from .elo_v3 import replay
+from .elo_v3 import replay, metrics, _paired_cohort
+from .elo_v2 import Elo2Engine, SOS_WEIGHT
 
 def build(games,ratings,boxes):
     if games.get("season")!=2027 or ratings.get("season")!=2027 or ratings.get("mode")!="current":
@@ -38,6 +39,21 @@ def build(games,ratings,boxes):
                     "winner":winner,"loser":loser}
     if len(pairs)!=len(boxes.get("games",[])):raise ValueError("Duplicate paired box")
     report=replay(fixtures,paired_boxes=pairs)
+    # Matched current-season shadow evaluation without unverified past-year IDs.
+    elo2=Elo2Engine({},SOS_WEIGHT).fit(fixtures,names)
+    cohort=_paired_cohort(elo2.game_receipts,report["rows"])
+    eligible=[row for row in cohort if row["boxUsed"]]
+    baseline=metrics(cohort,"elo2")
+    candidate=metrics(cohort,"elo3")
+    retrospective={
+        "status":"retrospective-same-date-neutral-prior",
+        "sourceGames":len(cohort),"pairedBoxEligibleGames":len(eligible),
+        "elo2":baseline,"elo3":candidate,
+        "brierGain":round(baseline["brier"]-candidate["brier"],6),
+        "withPriorBoxSamples":{
+            "elo2":metrics(eligible,"elo2"),"elo3":metrics(eligible,"elo3")},
+        "warning":"Reconstructed previous-date probabilities, not archived first-published predictions. Historic compact scores cannot validate box-stat gains."}
+
     source={t["name"]:t for t in ratings["teams"]}
     rows=[]
     for tid,name in names.items():
@@ -66,6 +82,7 @@ def build(games,ratings,boxes):
             "sourceGames":len(fixtures),"teams":rows,
             "pairedBoxes":report["pairedBoxes"],"boxEligible":report["boxEligible"],
             "top25OutlierAudit":watch,
+            "currentRetrospective":retrospective,
             "ratingMethod":"Date-frozen, reliability-adjusted Elo + previous-opponent SOS + recent form + verified possession efficiency and Four Factors",
             "homeAdvantage":report["finalHomeAdvantage"],
             "previousSeasonPriors":"neutral-until-authoritative-cross-year-ID",

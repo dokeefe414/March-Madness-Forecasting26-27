@@ -24,6 +24,10 @@ class CurrentElo3Tests(unittest.TestCase):
                          round(result["teams"][0]["components"]["power"],2))
         self.assertIn("underlyingElo",result["teams"][0])
         self.assertEqual(len(result["top25OutlierAudit"]),2)
+        self.assertEqual(result["currentRetrospective"]["sourceGames"],1)
+        self.assertEqual(result["currentRetrospective"]["elo2"]["games"],1)
+        self.assertEqual(result["currentRetrospective"]["elo3"]["games"],1)
+        self.assertEqual(result["currentRetrospective"]["pairedBoxEligibleGames"],0)
         self.assertIn("small-sample",result["top25OutlierAudit"][0]["flags"])
 
     def test_reject_timestamp_mismatch(self):
