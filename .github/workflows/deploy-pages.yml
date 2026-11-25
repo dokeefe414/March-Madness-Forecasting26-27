@@ -77,6 +77,10 @@ jobs:
         env:
           PYTHONPATH: research
         run: python -m forecast.elo_v2_historical --out web/public/research/elo-v2-historical.json
+      - name: Publish paired historical Elo 3.0 versus Elo 2.0 held-out benchmark
+        env:
+          PYTHONPATH: research
+        run: python -m forecast.elo_v3 --out web/public/research/elo-v3-historical.json
       - name: Validate and build 2027 NCAA-source results
         env:
           PYTHONPATH: research

@@ -6,7 +6,8 @@ source-local and have neutral priors until authoritative cross-year IDs exist.
 import argparse,json
 from pathlib import Path
 from .elo_v2_current import _to_games
-from .elo_v3 import replay
+from .elo_v3 import replay, metrics, _paired_cohort
+from .elo_v2 import Elo2Engine, SOS_WEIGHT
 
 def build(games,ratings,boxes):
     if games.get("season")!=2027 or ratings.get("season")!=2027 or ratings.get("mode")!="current":
@@ -38,25 +39,57 @@ def build(games,ratings,boxes):
                     "winner":winner,"loser":loser}
     if len(pairs)!=len(boxes.get("games",[])):raise ValueError("Duplicate paired box")
     report=replay(fixtures,paired_boxes=pairs)
+    # Matched current-season shadow evaluation without unverified past-year IDs.
+    elo2=Elo2Engine({},SOS_WEIGHT).fit(fixtures,names)
+    cohort=_paired_cohort(elo2.game_receipts,report["rows"])
+    eligible=[row for row in cohort if row["boxUsed"]]
+    baseline=metrics(cohort,"elo2")
+    candidate=metrics(cohort,"elo3")
+    retrospective={
+        "status":"retrospective-same-date-neutral-prior",
+        "sourceGames":len(cohort),"pairedBoxEligibleGames":len(eligible),
+        "elo2":baseline,"elo3":candidate,
+        "brierGain":round(baseline["brier"]-candidate["brier"],6),
+        "withPriorBoxSamples":{
+            "elo2":metrics(eligible,"elo2"),"elo3":metrics(eligible,"elo3")},
+        "warning":"Reconstructed previous-date probabilities, not archived first-published predictions. Historic compact scores cannot validate box-stat gains."}
+
     source={t["name"]:t for t in ratings["teams"]}
     rows=[]
     for tid,name in names.items():
         original=source.get(name)
         if original is None:raise ValueError("Missing team from source ratings")
         rows.append({"teamId":original["teamId"],"name":name,
-                     "rating":round(report["ratings"].get(tid,1500.),2),
+                     "rating":round(report["powerRatings"].get(tid,1500.),2),
+                     "underlyingElo":round(report["ratings"].get(tid,1500.),2),
+                     "components":report["ratingComponents"][tid],
                      "games":report["gamesPlayed"].get(tid,0),
                      "record":str(original["wins"])+"-"+str(original["losses"]),
                      "sourceRating":original["rating"],
                      "boxGames":report["boxGames"].get(tid,0),
-                     "fourFactorGames":report["fourFactorGames"].get(tid,0)})
+                     "fourFactorGames":report["fourFactorGames"].get(tid,0),
+                     "divisionIConfirmed":original.get("divisionIConfirmed"),
+                     "sourceAdjustedNet100":original.get("adjNet100"),
+                     "sourceOpponentEloAtGame":original.get("opponentAverageEloAtGame")})
     if len(rows)!=len(ratings["teams"]):raise ValueError("Team coverage mismatch")
     rows.sort(key=lambda t:(-t["rating"],t["name"]))
     for i,row in enumerate(rows,1):row["rank"]=i
+    watch=[{"rank":row["rank"],"team":row["name"],"games":row["games"],
+            "sosAdjustment":row["components"]["sos"],"reliability":row["components"]["reliability"],
+            "boxGames":row["boxGames"],"fourFactorGames":row["fourFactorGames"],
+            "sourceAdjustedNet100":row["sourceAdjustedNet100"],
+            "sourceOpponentEloAtGame":row["sourceOpponentEloAtGame"],
+            "divisionIConfirmed":row["divisionIConfirmed"],
+            "flags":([ "small-sample" ] if row["games"]<10 else [])+
+                    ([ "weak-previous-opponents" ] if row["components"]["sos"]<-8 else [])}
+           for row in rows[:25]]
     return {"schemaVersion":1,"season":2027,"model":"elo3","status":"current-research-primary-teams",
             "retrievedAtUtc":stamp,"lastGameDate":ratings["lastGameDate"],
             "sourceGames":len(fixtures),"teams":rows,
             "pairedBoxes":report["pairedBoxes"],"boxEligible":report["boxEligible"],
+            "top25OutlierAudit":watch,
+            "currentRetrospective":retrospective,
+            "ratingMethod":"Date-frozen, reliability-adjusted Elo + previous-opponent SOS + recent form + verified possession efficiency and Four Factors",
             "homeAdvantage":report["finalHomeAdvantage"],
             "previousSeasonPriors":"neutral-until-authoritative-cross-year-ID",
             "limitations":["Elo 3.0 research ratings, not a proven better forward predictor.",

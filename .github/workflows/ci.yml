@@ -24,6 +24,24 @@ jobs:
         env:
           PYTHONPATH: research
         run: python -m forecast.efficiency_latent --games research/outputs/live-games.json --ratings research/outputs/live-ratings.json --boxes research/outputs/live-paired-boxes.json --out research/outputs/live-efficiency-latent-benchmark.json
+      - name: Generate real-current Elo 3 power rankings and paired Elo 2 shadow audit
+        env:
+          PYTHONPATH: research
+        run: |
+          python -m forecast.elo_v3_current --games research/outputs/live-games.json --ratings research/outputs/live-ratings.json --boxes research/outputs/live-paired-boxes.json --out research/outputs/live-elo3-power.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result=json.loads(Path("research/outputs/live-elo3-power.json").read_text())
+          ratings=json.loads(Path("research/outputs/live-ratings.json").read_text())
+          assert result["sourceGames"]==ratings["regularSeasonGames"]
+          assert len(result["teams"])==len(ratings["teams"])
+          assert all(t["components"]["power"]==round(t["rating"],4) or abs(t["components"]["power"]-t["rating"])<.01 for t in result["teams"])
+          assert result["currentRetrospective"]["sourceGames"]==result["sourceGames"]
+          assert result["currentRetrospective"]["elo2"]["games"]==result["sourceGames"]
+          assert result["currentRetrospective"]["elo3"]["games"]==result["sourceGames"]
+          print("Current Elo3 source integrity:",len(result["teams"]),"teams; source-matched games:",result["sourceGames"])
+          PY
       - name: Upload real-season model comparison and source coverage
         if: always()
         uses: actions/upload-artifact@v4
@@ -34,6 +52,7 @@ jobs:
             research/outputs/live-games.json
             research/outputs/live-paired-boxes.json
             research/outputs/live-efficiency-latent-benchmark.json
+            research/outputs/live-elo3-power.json
           if-no-files-found: warn
       - name: Evaluate six-factor Elo 3.0 against production Elo on historical seasons
         env:

@@ -1,3 +1,30 @@
+## Elo 3.0 rating outlier audit and Elo 2.0 benchmark — November 25, 2026
+
+Elo 3.0 now publishes a **component-based team power rating** rather than
+sorting only the internal Elo update. Ratings include early-sample reliability,
+all-opponent previous-game strength of schedule, recent form and verified
+possession efficiency/Four Factors (where source coverage exists). The
+`top25OutlierAudit` exposes weak-opponent and limited-sample warnings.
+
+A new **paired 2016–2025 historical Elo 2.0 vs Elo 3.0** benchmark tests the
+same fixed-date fixtures and compares one-year against three-year verified
+historical-ID carryover, Brier, log loss, accuracy, calibration, season-block
+uncertainty and early-season behavior. The source CSV does *not* have box
+statistics; these cannot be retroactively invented. 2027 prior ratings remain
+neutral until the modern source IDs can be matched to earlier years with
+independent longitudinal identity evidence. No automatic predictor promotion.
+
+**Verified historical comparison:** eight complete held-out seasons,
+43,827 paired scores. Elo 2.0 Brier **0.192457**, Elo 3.0 one-year **0.191266**,
+three-year **0.191155**; however winner classification accuracy **fell**
+from 71.61% to 70.92% / 70.90%. Improved Brier and calibration do **not**
+mean every metric improved, and verified box/Four-Factor accuracy is still a
+separate current-source question.
+
+[Methodology and reproducible tests](docs/elo-v3-audit-and-benchmark.md).
+Live artifact: `current/elo-v3-teams.json`. Benchmark artifact:
+`research/elo-v3-historical.json`.
+
 **Elo 3.0 statistical coverage:** [Verified features and limitations](docs/elo-v3-stats.md).
 
 ### Elo 3.0 current Teams tab (experimental)

@@ -1,179 +1,365 @@
-"""Research-only Elo 3: six causal improvements with matched historical comparison."""
+"""Elo 3.0: date-frozen power ratings and paired Elo 2.0 historical validation.
+
+Power and probability use the SAME pregame strength components: previous-date
+Elo, reliability, opponent strength, form and verified box statistics. No
+future result, end-season opponent rating or guessed prior enters a prediction.
+"""
 from __future__ import annotations
-import argparse,json,math
+
+import argparse
+import json
+import math
+import random
 from collections import defaultdict
 from itertools import groupby
 from pathlib import Path
+
 from .core import matchup_probability
-from .game_aware_elo import GameAwareEloEngine,margin_multiplier
-from .elo_v2 import preseason_priors
-from .elo_v2_historical import read_games,download,URL,HOLDOUT_YEARS
+from .game_aware_elo import GameAwareEloEngine, margin_multiplier
+from .elo_v2 import Elo2Engine, SOS_WEIGHT, preseason_priors
+from .elo_v2_historical import read_games, download, URL, HOLDOUT_YEARS
 
-def metrics(rows,key):
-    n=len(rows)
-    if not n:return {"games":0,"brier":None,"logLoss":None}
-    return {"games":n,"brier":round(sum((x[key]-x["y"])**2 for x in rows)/n,6),
-            "logLoss":round(-sum(math.log(max(1e-12,x[key] if x["y"] else 1-x[key])) for x in rows)/n,6)}
+CENTER = 1500.
+SOS_WEIGHT_V3 = .20
+SOS_CAP_V3 = 24.
+EARLY_GAMES = 8.
+FORM_CAP = 20.
+EFFICIENCY_CAP = 24.
+FACTOR_CAP = 12.
+HISTORICAL_WEIGHTS = (.65, .25, .10)
+BOOTSTRAP_SEED = 62027
 
-def probability(gap,temperature=1.):
-    return matchup_probability(1500.+gap/temperature,1500.)
 
-def replay(games,priors=None,paired_boxes=None):
-    """Frozen previous-date Elo; paired_boxes keyed by immutable contest ID."""
-    games=sorted(games,key=lambda g:(g.day_num,min(g.winner,g.loser),max(g.winner,g.loser),g.contest_id))
-    if not games:return {"rows":[],"pairedBoxes":0,"boxEligible":0}
-    if len({g.season for g in games})!=1:raise ValueError("Multiple seasons")
-    ids=[g.contest_id for g in games if g.contest_id]
-    if len(ids)!=len(set(ids)):raise ValueError("Duplicate contest ID")
-    ratings=defaultdict(lambda:1500.)
-    for team,value in (priors or {}).items():
-        if not math.isfinite(value) or not 1000<=value<=2000:raise ValueError("Invalid prior")
-        ratings[team]=value
-    form=defaultdict(float);counts=defaultdict(int)
-    # Two-sided, source-verified ORTG/DRTG/poss; no fabricated data.
-    off=defaultdict(float);defence=defaultdict(float);poss=defaultdict(float);boxcount=defaultdict(int)
-    factor_sum=defaultdict(float);factor_count=defaultdict(int);opponent_sum=defaultdict(float)
-    home=65.;history=[];rows=[];matched=eligible=0
-    for day,group in groupby(games,key=lambda g:g.day_num):
-        batch=list(group)
-        if any(g.winner_location not in ("H","A","N") or g.winner_score<=g.loser_score
-               or g.loser_score<=0 for g in batch):raise ValueError("Invalid scored game")
-        # Calibrate only using completed previous dates, with a small
-        # penalty for overfitting temperature.
-        temperatures=(.8,.9,1.,1.1,1.2,1.35)
-        if len(history)>=120 and len({x["day"] for x in history})>=15:
-            temp=min(temperatures,key=lambda t:(
-                sum((probability(x["gap"],t)-x["y"])**2 for x in history)/len(history)
-                +.0003*(t-1.)**2,abs(t-1.)))
-        else:temp=1.
-        frozen=[]
+def clamp(x, limit):
+    return max(-limit, min(limit, x))
+
+
+def probability(gap, temperature=1.):
+    return matchup_probability(CENTER + gap / temperature, CENTER)
+
+
+def metrics(rows, key):
+    """Paired first-team probabilities: 1 means lowest numeric team ID wins."""
+    n = len(rows)
+    if not n:
+        return {"games": 0, "brier": None, "logLoss": None,
+                "accuracy": None, "ece": None, "calibrationBins": []}
+    brier = sum((r[key] - r["y"]) ** 2 for r in rows) / n
+    logloss = -sum(r["y"] * math.log(max(1e-12, min(1 - 1e-12, r[key])))
+                   + (1 - r["y"]) * math.log(max(1e-12, min(1 - 1e-12, 1 - r[key])))
+                   for r in rows) / n
+    accuracy = sum(.5 if r[key] == .5 else 1. if ((r[key] > .5) == bool(r["y"])) else 0. for r in rows) / n
+    bins = [[0, 0., 0.] for _ in range(10)]
+    for row in rows:
+        i = min(9, int(row[key] * 10))
+        bins[i][0] += 1
+        bins[i][1] += row[key]
+        bins[i][2] += row["y"]
+    ece = sum(abs(pred - actual) for count, pred, actual in bins if count) / n
+    return {"games": n, "brier": round(brier, 6),
+            "logLoss": round(logloss, 6), "accuracy": round(accuracy, 6),
+            "ece": round(ece, 6),
+            "calibrationBins": [[c, round(p, 4), round(y, 4)] for c, p, y in bins]}
+
+
+def _four_factor_residual(box, other):
+    f, opponent = box.get("factors"), other.get("factors")
+    if f is None or opponent is None:
+        return None
+    keys = ("fga", "fgm", "fg3m", "fta", "tov", "orb", "drb")
+    if any(type(f.get(k)) not in (int, float) or not math.isfinite(f[k]) or
+           f[k] < 0 for k in keys):
+        raise ValueError("Invalid verified Four Factors")
+    if type(opponent.get("drb")) not in (int, float) or not math.isfinite(opponent["drb"]) or opponent["drb"] < 0:
+        raise ValueError("Invalid opponent defensive rebounds")
+    if f["fga"] <= 0 or f["fgm"] > f["fga"] or f["fg3m"] > f["fgm"]:
+        raise ValueError("Impossible verified shooting totals")
+    # Neutral references are fixed heuristic baselines, NOT sourced
+    # opponent averages or trained future-season statistics.
+    efg = (f["fgm"] + .5 * f["fg3m"]) / f["fga"]
+    tov = f["tov"] / max(30., box["poss"])
+    orb = f["orb"] / max(1., f["orb"] + opponent["drb"])
+    ftr = f["fta"] / f["fga"]
+    return clamp((efg - .50) - (tov - .18) + .20 * (orb - .30) + .10 * (ftr - .30), .5)
+
+
+def replay(games, priors=None, paired_boxes=None):
+    """Strict previous-date forecast with end-of-season component breakdown."""
+    games = sorted(games, key=lambda g: (g.day_num, min(g.winner, g.loser),
+                    max(g.winner, g.loser), g.contest_id))
+    if not games:
+        return {"rows": [], "pairedBoxes": 0, "boxEligible": 0,
+                "ratings": {}, "powerRatings": {}, "ratingComponents": {},
+                "gamesPlayed": {}, "recentForm": {}, "boxGames": {}, "fourFactorGames": {}}
+    if len({g.season for g in games}) != 1:
+        raise ValueError("Multiple seasons in Elo 3 replay")
+    ids = [g.contest_id for g in games]
+    if any(not x for x in ids) or len(ids) != len(set(ids)):
+        raise ValueError("Duplicate or missing contest ID")
+    initial = dict(priors or {})
+    if any(type(v) not in (float, int) or not math.isfinite(v) or not 1000 <= v <= 2000
+           for v in initial.values()):
+        raise ValueError("Invalid cross-season prior")
+    ratings = defaultdict(lambda: CENTER, initial)
+    form = defaultdict(float)
+    counts = defaultdict(int)
+    opponent_sums = defaultdict(float)
+    off, defence, poss = defaultdict(float), defaultdict(float), defaultdict(float)
+    boxcount = defaultdict(int)
+    factor_sum, factor_count = defaultdict(float), defaultdict(int)
+    home, history, rows, matched, eligible = 65., [], [], 0, 0
+    participants = set()
+
+    def strength(team):
+        n = counts[team]
+        initial_rating = initial.get(team, CENTER)
+        reliability = .65 + .35 * n / (n + EARLY_GAMES)
+        base = initial_rating + reliability * (ratings[team] - initial_rating)
+        sos = clamp(SOS_WEIGHT_V3 * opponent_sums[team] / (n + 8.), SOS_CAP_V3)
+        recent = clamp(form[team] * n / (n + 12.), FORM_CAP)
+        efficiency = 0.
+        factors = 0.
+        if boxcount[team] >= 3:
+            # Possession-shrunk net efficiency against verified paired box data.
+            efficiency = clamp(2. * (off[team] - defence[team]) /
+                               (poss[team] + 500.) * 100., EFFICIENCY_CAP)
+        if factor_count[team] >= 3:
+            factors = clamp(25. * factor_sum[team] /
+                            (factor_count[team] + 8.), FACTOR_CAP)
+        return {"rawElo": round(ratings[team], 4),
+                "prior": round(initial_rating, 4),
+                "reliability": round(reliability, 5),
+                "reliableElo": round(base, 4),
+                "sos": round(sos, 4), "form": round(recent, 4),
+                "efficiency": round(efficiency, 4),
+                "fourFactors": round(factors, 4),
+                "power": round(base + sos + recent + efficiency + factors, 4),
+                "games": n, "boxGames": boxcount[team],
+                "fourFactorGames": factor_count[team]}
+
+    for day, group in groupby(games, key=lambda g: g.day_num):
+        batch = list(group)
+        if any(g.day_num < 0 or g.winner == g.loser or
+               g.winner_location not in ("H", "A", "N") or
+               g.winner_score <= g.loser_score or g.loser_score <= 0
+               for g in batch):
+            raise ValueError("Invalid scored game")
+        # Temperature only fitted on previous dates. This is NOT a prospective
+        # out-of-sample hyperparameter search.
+        temperatures = (.8, .9, 1., 1.1, 1.2, 1.35)
+        if len(history) >= 120 and len({h["day"] for h in history}) >= 15:
+            temp = min(temperatures, key=lambda t: (
+                sum((probability(h["gap"], t) - h["y"]) ** 2 for h in history) /
+                len(history) + .0003 * (t - 1.) ** 2, abs(t - 1.)))
+        else:
+            temp = 1.
+        frozen = []
         for g in batch:
-            w,l=g.winner,g.loser
-            venue={"H":home,"A":-home,"N":0.}[g.winner_location]
-            recency=max(-30.,min(30.,form[w]*counts[w]/(counts[w]+12.)
-                                     -form[l]*counts[l]/(counts[l]+12.)))
-            efficiency=0.
-            if boxcount[w]>=3 and boxcount[l]>=3:
-                netw=(off[w]-defence[w])/(poss[w]+500.)*100.
-                netl=(off[l]-defence[l])/(poss[l]+500.)*100.
-                # Adjust observed efficiency for prior opponent strength;
-                # 1500 is neutral, and opponent ratings are sampled pregame.
-                sosw=(opponent_sum[w]-1500.*boxcount[w])/(boxcount[w]+8.)
-                sosl=(opponent_sum[l]-1500.*boxcount[l])/(boxcount[l]+8.)
-                efficiency=max(-45.,min(45.,2.*(netw-netl)+.15*(sosw-sosl)))
-                # Four-factor information is independent only when source
-                # supplies both sides; shrink heavily to avoid double counting.
-                if factor_count[w]>=3 and factor_count[l]>=3:
-                    fw=factor_sum[w]/(factor_count[w]+8.)
-                    fl=factor_sum[l]/(factor_count[l]+8.)
-                    efficiency=max(-45.,min(45.,efficiency+25.*(fw-fl)))
-                eligible+=1
-            gap=ratings[w]-ratings[l]+venue+recency+efficiency
-            raw=probability(gap)
-            p=probability(gap,temp)
-            y=1. if w<l else 0.
-            rows.append({"contestId":g.contest_id,"day":day,"y":y,
-                         "elo3":p if y else 1-p,"uncalibrated":raw if y else 1-raw,
-                         "temperature":temp,"boxUsed":bool(efficiency)})
-            frozen.append((g,gap,raw))
-        # All game predictions are frozen before updating ANY result of day.
-        for g,gap,raw in frozen:
-            w,l=g.winner,g.loser
-            margin=g.winner_score-g.loser_score
-            k=24.*margin_multiplier(margin)/(1.+max(0.,ratings[w]-ratings[l])/1800.)
-            k*=.65+.35*min(counts[w],counts[l])/(min(counts[w],counts[l])+6.)
-            delta=k*(1.-raw)
-            ratings[w]+=delta;ratings[l]-=delta
-            form[w]=.8*form[w]+.2*delta
-            form[l]=.8*form[l]-.2*delta
-            counts[w]+=1;counts[l]+=1
-            if g.winner_location!="N":
-                home_won=g.winner_location=="H"
-                expected_home=raw if home_won else 1.-raw
-                home=max(15.,min(110.,home+1.5*((1. if home_won else 0.)-expected_home)))
-            before_w=ratings[w]-delta
-            before_l=ratings[l]+delta
-            box=(paired_boxes or {}).get(g.contest_id)
-            if box is not None:
-                if (box.get("winnerId")!=w or box.get("loserId")!=l or box.get("dayNum")!=day):
-                    raise ValueError("Paired-box identity mismatch")
-                for team,side,opponent in ((w,"winner",before_l),(l,"loser",before_w)):
-                    b=box[side]
-                    if any(type(b.get(k)) not in (float,int) or not math.isfinite(b[k]) or
-                           not (30<=b[k]<=180 if k=="poss" else 25<=b[k]<=250)
-                           for k in ("poss","off","def")):
-                        raise ValueError("Invalid source paired-box metric")
-                    off[team]+=b["off"]*b["poss"]/100.
-                    defence[team]+=b["def"]*b["poss"]/100.
-                    poss[team]+=b["poss"];boxcount[team]+=1
-                    opponent_sum[team]+=opponent
-                    f=b.get("factors")
-                    other=box["loser" if side=="winner" else "winner"].get("factors")
-                    if f is not None and other is not None:
-                        # Exact source four factors: eFG, turnover rate,
-                        # offensive rebound share and free-throw rate.
-                        if f["fga"]>0 and f["fgm"]<=f["fga"] and f["fg3m"]<=f["fgm"]:
-                            efg=(f["fgm"]+.5*f["fg3m"])/f["fga"]
-                            tov=f["tov"]/max(30.,b["poss"])
-                            orb=f["orb"]/max(1.,f["orb"]+other["drb"])
-                            ftr=f["fta"]/f["fga"]
-                            factor_sum[team]+=efg-tov+.2*orb+.1*ftr
-                            factor_count[team]+=1
-                matched+=1
-        for g,gap,raw in frozen:
-            y=1. if g.winner<g.loser else 0.
-            history.append({"day":day,"gap":gap if y else -gap,"y":y})
-    return {"rows":rows,"pairedBoxes":matched,"boxEligible":eligible,
-            "finalHomeAdvantage":round(home,3),
-            "ratings":dict(ratings),"gamesPlayed":dict(counts),
-            "recentForm":dict(form),"boxGames":dict(boxcount),
-            "fourFactorGames":dict(factor_count)}
+            w, l = g.winner, g.loser
+            participants.update((w, l))
+            before_w, before_l = ratings[w], ratings[l]
+            wpower, lpower = strength(w)["power"], strength(l)["power"]
+            venue = {"H": home, "A": -home, "N": 0.}[g.winner_location]
+            gap = wpower - lpower + venue
+            raw = probability(gap)
+            p = probability(gap, temp)
+            y = 1. if w < l else 0.
+            rows.append({"contestId": g.contest_id, "day": day, "y": y,
+                         "elo3": p if y else 1 - p,
+                         "uncalibrated": raw if y else 1 - raw,
+                         "temperature": temp,
+                         "boxUsed": boxcount[w] >= 3 and boxcount[l] >= 3})
+            k = 24. * margin_multiplier(g.winner_score - g.loser_score) / (
+                1. + max(0., before_w - before_l) / 1800.)
+            k *= .65 + .35 * min(counts[w], counts[l]) / (min(counts[w], counts[l]) + 6.)
+            frozen.append((g, gap, raw, k * (1 - raw), before_w, before_l))
+            if boxcount[w] >= 3 and boxcount[l] >= 3:
+                eligible += 1
 
-def evaluate(grouped,years=HOLDOUT_YEARS):
-    reports=[];allrows=[]
+        # Freeze ALL within-date deltas and opponent ratings before any result
+        # is incorporated. Prevent multiple same-day games from leaking order.
+        for g, gap, raw, delta, before_w, before_l in frozen:
+            w, l = g.winner, g.loser
+            ratings[w] += delta
+            ratings[l] -= delta
+            form[w] = .8 * form[w] + .2 * delta
+            form[l] = .8 * form[l] - .2 * delta
+            counts[w] += 1
+            counts[l] += 1
+            opponent_sums[w] += before_l - CENTER
+            opponent_sums[l] += before_w - CENTER
+            if g.winner_location != "N":
+                home_won = g.winner_location == "H"
+                expected_home = raw if home_won else 1 - raw
+                home = max(15., min(110., home + 1.5 * (
+                    (1. if home_won else 0.) - expected_home)))
+            box = (paired_boxes or {}).get(g.contest_id)
+            if box is not None:
+                if (box.get("winnerId") != w or box.get("loserId") != l or
+                    box.get("dayNum") != day):
+                    raise ValueError("Paired-box identity mismatch")
+                for team, side in ((w, "winner"), (l, "loser")):
+                    b = box[side]
+                    if any(type(b.get(k)) not in (float, int) or not math.isfinite(b[k]) or
+                           not (30 <= b[k] <= 180 if k == "poss" else 25 <= b[k] <= 250)
+                           for k in ("poss", "off", "def")):
+                        raise ValueError("Invalid source paired-box metric")
+                    off[team] += b["off"] * b["poss"] / 100.
+                    defence[team] += b["def"] * b["poss"] / 100.
+                    poss[team] += b["poss"]
+                    boxcount[team] += 1
+                    opponent = box["loser" if side == "winner" else "winner"]
+                    residual = _four_factor_residual(b, opponent)
+                    if residual is not None:
+                        factor_sum[team] += residual
+                        factor_count[team] += 1
+                matched += 1
+        for g, gap, raw, delta, before_w, before_l in frozen:
+            y = 1. if g.winner < g.loser else 0.
+            history.append({"day": day, "gap": gap if y else -gap, "y": y})
+
+    components = {team: strength(team) for team in sorted(participants)}
+    return {"rows": rows, "pairedBoxes": matched, "boxEligible": eligible,
+            "finalHomeAdvantage": round(home, 3),
+            "ratings": {t: ratings[t] for t in participants},
+            "powerRatings": {t: v["power"] for t, v in components.items()},
+            "ratingComponents": components, "gamesPlayed": dict(counts),
+            "recentForm": dict(form), "boxGames": dict(boxcount),
+            "fourFactorGames": dict(factor_count)}
+
+
+def historical_priors(grouped, year, current_ids, lag_count=3):
+    """Only same stable historical Kaggle IDs; never join live NCAA names."""
+    if lag_count not in (1, 3):
+        raise ValueError("Unsupported historical lookback")
+    years = []
+    for lag, weight in enumerate(HISTORICAL_WEIGHTS[:lag_count], 1):
+        past = grouped.get(year - lag, [])
+        if not past or max(g.day_num for g in past) < 132:
+            continue
+        fitted = GameAwareEloEngine().fit(past, {})
+        years.append((weight, {i: state.rating for i, state in fitted.states.items()}))
+    out = {}
+    for team in current_ids:
+        available = [(weight, ratings[team]) for weight, ratings in years if team in ratings]
+        if not available:
+            continue
+        denominator = sum(weight for weight, _ in available)
+        deviation = sum(weight * clamp(rating - CENTER, 160.)
+                        for weight, rating in available) / denominator
+        out[team] = CENTER + .55 * deviation
+    return out
+
+
+def _paired_cohort(elo2, elo3):
+    receipts = {r["contestId"]: r for r in elo2}
+    if len(receipts) != len(elo2) or len(elo3) != len(elo2):
+        raise ValueError("Duplicate/missing Elo2/Elo3 historical fixtures")
+    rows = []
+    for row in elo3:
+        original = receipts.get(row["contestId"])
+        if original is None or original["dayNum"] != row["day"]:
+            raise ValueError("Paired Elo2/Elo3 date/contest mismatch")
+        won = original["winnerId"] < original["loserId"]
+        if bool(row["y"]) != won:
+            raise ValueError("Paired Elo2/Elo3 winner mismatch")
+        rows.append({**row, "elo2": original["winnerProbability"] if won else
+                     1 - original["winnerProbability"]})
+    if len({x["contestId"] for x in rows}) != len(rows):
+        raise ValueError("Duplicate Elo3 contest")
+    return rows
+
+
+def _gain_ci(years, variant):
+    if len(years) < 5:
+        return None
+    rng = random.Random(BOOTSTRAP_SEED)
+    draws = []
+    for _ in range(600):
+        cohort = [years[rng.randrange(len(years))] for _ in years]
+        total = sum(x["games"] for x in cohort)
+        draws.append(sum(x["gains"][variant] * x["games"] for x in cohort) / total)
+    draws.sort()
+    return [round(draws[int(.025 * (len(draws) - 1))], 6),
+            round(draws[int(.975 * (len(draws) - 1))], 6)]
+
+
+def evaluate(grouped, years=HOLDOUT_YEARS):
+    """Paired held-out seasons, identical 2027-excluded sources and prior policy."""
+    reports, all_rows = [], []
     for year in years:
-        if year-1 not in grouped or year not in grouped:continue
-        prev,now=grouped[year-1],grouped[year]
-        if max(g.day_num for g in prev)<132 or max(g.day_num for g in now)<132:continue
-        ids={g.winner for g in now}|{g.loser for g in now}
-        old=GameAwareEloEngine().fit(prev,{})
-        priors=preseason_priors({i:s.rating for i,s in old.states.items()},ids)
-        base=GameAwareEloEngine().fit(now,{})
-        challenger=replay(now,priors)
-        byid={x["contestId"]:x for x in base.game_receipts}
-        if len(byid)!=len(challenger["rows"]):raise ValueError("Unmatched cohort")
-        cohort=[]
-        for row in challenger["rows"]:
-            b=byid[row["contestId"]]
-            if b["dayNum"]!=row["day"]:raise ValueError("Date mismatch")
-            p=b["winnerProbability"] if row["y"] else 1.-b["winnerProbability"]
-            cohort.append({**row,"baseline":p})
-        a,b=metrics(cohort,"baseline"),metrics(cohort,"elo3")
-        reports.append({"season":year,"games":len(cohort),"baseline":a,"elo3":b,
-                        "brierGain":round(a["brier"]-b["brier"],6)})
-        allrows.extend(cohort)
-    a,b=metrics(allrows,"baseline"),metrics(allrows,"elo3")
-    return {"schemaVersion":1,"mode":"elo3-historical-previous-date-research",
-            "holdoutSeasons":[x["season"] for x in reports],"games":len(allrows),
-            "baseline":a,"elo3":b,"uncalibrated":metrics(allrows,"uncalibrated"),
-            "brierGain":round(a["brier"]-b["brier"],6) if allrows else None,
-            "bySeason":reports,"source":URL,"automaticPromotion":False,
-            "capabilities":{"verifiedOpponentEfficiency":"optional paired-box inputs; not available in compact historical score file",
-                            "adaptiveHome":True,"boundedMargin":True,"recentFormAndUncertainty":True,
-                            "stableIdPriorSeason":True,"previousDateCalibration":True},
-            "limitations":["Historical compact score source has no paired box scores, so historical efficiency feature is disabled, not imputed.",
-                           "Hyperparameters are research hypotheses, not nested-tuned.",
-                           "Date-frozen replay is not a prospective first-pick test.",
-                           "Source-linked current-season paired-box benchmark is a separate evaluation.",
-                           "Production model unchanged."]}
+        now = grouped.get(year, [])
+        previous = grouped.get(year - 1, [])
+        if not now or not previous or max(g.day_num for g in now) < 132 or max(g.day_num for g in previous) < 132:
+            continue
+        ids = {g.winner for g in now} | {g.loser for g in now}
+        one = historical_priors(grouped, year, ids, 1)
+        multi = historical_priors(grouped, year, ids, 3)
+        elo2 = Elo2Engine(one, SOS_WEIGHT).fit(now, {})
+        v3 = replay(now, one)
+        v3multi = replay(now, multi)
+        cohort = _paired_cohort(elo2.game_receipts, v3["rows"])
+        longer = _paired_cohort(elo2.game_receipts, v3multi["rows"])
+        if [r["contestId"] for r in cohort] != [r["contestId"] for r in longer]:
+            raise ValueError("Different Elo 3 multi-season comparison cohort")
+        for a, b in zip(cohort, longer):
+            a["elo3Multi"] = b["elo3"]
+        early = [row for row in cohort if row["day"] <= 45]
+        base, three, many = (metrics(cohort, k) for k in ("elo2", "elo3", "elo3Multi"))
+        reports.append({"season": year, "priorSeasons": [year-3, year-2, year-1],
+                        "games": len(cohort), "priorCoverage": len(one),
+                        "multiYearPriorCoverage": len(multi),
+                        "elo2": base, "elo3": three, "elo3Multi": many,
+                        "earlySeason": {k: metrics(early, k) for k in ("elo2","elo3","elo3Multi")},
+                        "gains": {"elo3": round(base["brier"] - three["brier"], 8),
+                                  "elo3Multi": round(base["brier"] - many["brier"], 8)}})
+        all_rows.extend(cohort)
+    base, three, many = (metrics(all_rows, k) for k in ("elo2","elo3","elo3Multi"))
+    early_all = [x for x in all_rows if x["day"] <= 45]
+    return {"schemaVersion": 2, "type": "elo3-versus-elo2-season-holdout",
+            "status": "ready" if len(reports) >= 5 else "insufficient-complete-seasons",
+            "holdoutSeasons": [x["season"] for x in reports],
+            "games": len(all_rows), "elo2": base, "elo3": three, "elo3Multi": many,
+            "brierGain": round(base["brier"] - three["brier"], 6) if all_rows else None,
+            "multiYearBrierGain": round(base["brier"] - many["brier"], 6) if all_rows else None,
+            "earlySeason": {k: metrics(early_all, k) for k in ("elo2","elo3","elo3Multi")},
+            "seasonBlockGain95": {k: _gain_ci(reports, k) for k in ("elo3","elo3Multi")},
+            "positiveGainSeasons": {k: sum(1 for row in reports if row["gains"][k] > 0)
+                                    for k in ("elo3","elo3Multi")},
+            "bySeason": reports, "source": URL, "automaticPromotion": False,
+            "historicalIDPolicy": "Stable source Kaggle team IDs, trailing 1 or 3 complete seasons, each strictly before the test year",
+            "capabilities": {"verifiedFourFactors": "unavailable in pinned historical compact-results source",
+                             "opponentStrength": True, "margin": True,
+                             "sampleReliability": True, "recentForm": True,
+                             "homeAdjustment": True, "previousDateCalibration": True,
+                             "priorSeasonCarryover": True},
+            "limitations": [
+                "Box-score efficiency and Four Factors cannot be benchmarked from historical compact scores; those features are disabled, not imputed.",
+                "The ten holdout years are fixed; model coefficients were not nested-tuned and retrospective gains are not prospective published picks.",
+                "2027 names/hashes cannot be joined to historical Kaggle IDs without independent season-spanning identity evidence.",
+                "Historical accuracy alone does not authorize replacing a published production forecasting model."]}
+
+
 def main():
-    p=argparse.ArgumentParser()
-    p.add_argument("--raw-csv",type=Path)
-    p.add_argument("--out",type=Path,default=Path("research/outputs/elo3-historical.json"))
-    args=p.parse_args()
-    grouped,digest=read_games(args.raw_csv.read_bytes() if args.raw_csv else download())
-    report=evaluate(grouped);report["sourceSha256"]=digest
-    args.out.parent.mkdir(parents=True,exist_ok=True)
-    args.out.write_text(json.dumps(report,indent=2)+"\n",encoding="utf-8")
-    print(json.dumps({k:report[k] for k in ("games","baseline","elo3","brierGain")},indent=2))
-if __name__=="__main__":main()
+    p = argparse.ArgumentParser()
+    p.add_argument("--raw-csv", type=Path)
+    p.add_argument("--out", type=Path, default=Path("research/outputs/elo3-historical.json"))
+    args = p.parse_args()
+    try:
+        grouped, digest = read_games(args.raw_csv.read_bytes() if args.raw_csv else download())
+        report = evaluate(grouped)
+        report["sourceSha256"] = digest
+    except (OSError, TimeoutError, ValueError, KeyError) as exc:
+        if args.raw_csv:
+            raise
+        report = {"schemaVersion": 2, "type": "elo3-versus-elo2-season-holdout",
+                  "status": "unavailable", "games": 0,
+                  "reason": f"Pinned source unavailable: {type(exc).__name__}: {str(exc)[:180]}",
+                  "source": URL, "holdoutSeasons": [], "automaticPromotion": False}
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps({k: report.get(k) for k in ("status", "games", "brierGain", "multiYearBrierGain")}, indent=2))
+
+
+if __name__ == "__main__":
+    main()
