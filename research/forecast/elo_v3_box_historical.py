@@ -31,6 +31,11 @@ MAX_BYTES = 22_000_000
 MIN_COVERAGE = .90
 MIN_HOLDOUT_DATES = 130
 FEATURES = ("scoreOnly", "efficiency", "fourFactors", "extended")
+INCREMENTAL = {
+    "efficiencyVsScoreOnly":("scoreOnly","efficiency"),
+    "fourFactorsVsEfficiency":("efficiency","fourFactors"),
+    "extendedVsFourFactors":("fourFactors","extended"),
+}
 FIELD_BASE = ("Season","DayNum","WTeamID","WScore","LTeamID","LScore","WLoc")
 STATS = ("FGM","FGA","FGM3","FGA3","FTM","FTA","OR","DR","Ast","TO","Stl","Blk","PF")
 
@@ -246,8 +251,11 @@ def evaluate(grouped:dict, pairs:dict, coverage:dict, years=HOLDOUT_YEARS):
             "extendedEligibleGames":sum(row["extendedEligible"] for row in eligible),
             "coverage":info["coverage"],
             "baseline":baseline,"variants":comparisons,
-            "gains":{v:round(baseline["brier"]-comparisons[v]["brier"],8)
-                     for v in FEATURES}})
+            "gains":({v:round(baseline["brier"]-comparisons[v]["brier"],8)
+                     for v in FEATURES} |
+                     {name:round(comparisons[before]["brier"]-
+                                 comparisons[after]["brier"],8)
+                      for name,(before,after) in INCREMENTAL.items()})})
         all_rows.extend(eligible)
     summary={key:metrics(all_rows,key) for key in FEATURES}
     baseline=summary["scoreOnly"]
@@ -263,6 +271,15 @@ def evaluate(grouped:dict, pairs:dict, coverage:dict, years=HOLDOUT_YEARS):
         "sourceCoverage":coverage,"exclusions":excluded,
         "eligiblePairedGames":len(all_rows),
         "variants":summary,"brierGainVsScoreOnly":gains,
+        "incrementalBrierGain":{
+            name:round(summary[before]["brier"]-summary[after]["brier"],6)
+            if all_rows else None
+            for name,(before,after) in INCREMENTAL.items()},
+        "incrementalSeasonBlockGain95":{
+            name:_gain_ci(seasons,name) for name in INCREMENTAL},
+        "incrementalPositiveSeasons":{
+            name:sum(year["gains"][name]>0 for year in seasons)
+            for name in INCREMENTAL},
         "seasonBlockGain95":{key:_gain_ci(seasons,key) for key in FEATURES[1:]},
         "positiveSeasons":{key:sum(s["gains"][key]>0 for s in seasons)
                            for key in FEATURES[1:]},
