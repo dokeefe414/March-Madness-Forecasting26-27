@@ -2758,6 +2758,19 @@
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
+      "away": "Jackson St.",
+      "awayEspnTeamId": "2296",
+      "awayScore": 58,
+      "date": "2026-11-25",
+      "eventId": "401919042",
+      "firstObservedAtUtc": "2026-11-25T23:02:20.266695Z",
+      "home": "Oklahoma St.",
+      "homeEspnTeamId": "197",
+      "homeScore": 93,
+      "scheduledStartUtc": "2026-11-25T20:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
       "away": "Milwaukee",
       "awayEspnTeamId": "270",
       "awayScore": 64,
@@ -3590,6 +3603,19 @@
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
+      "away": "Southeastern La.",
+      "awayEspnTeamId": "2545",
+      "awayScore": 73,
+      "date": "2026-11-25",
+      "eventId": "401920548",
+      "firstObservedAtUtc": "2026-11-25T23:02:20.266695Z",
+      "home": "North Dakota",
+      "homeEspnTeamId": "155",
+      "homeScore": 72,
+      "scheduledStartUtc": "2026-11-25T20:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
       "away": "Morgan St.",
       "awayEspnTeamId": "2415",
       "awayScore": 63,
@@ -3990,6 +4016,19 @@
       "homeEspnTeamId": "276",
       "homeScore": 67,
       "scheduledStartUtc": "2026-11-18T00:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
+      "away": "Prairie View",
+      "awayEspnTeamId": "2504",
+      "awayScore": 58,
+      "date": "2026-11-25",
+      "eventId": "401920858",
+      "firstObservedAtUtc": "2026-11-25T23:02:20.266695Z",
+      "home": "Marshall",
+      "homeEspnTeamId": "276",
+      "homeScore": 64,
+      "scheduledStartUtc": "2026-11-25T21:00:00Z",
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
@@ -4866,6 +4905,19 @@
     {
       "away": "LSU",
       "awayEspnTeamId": "99",
+      "awayScore": 94,
+      "date": "2026-11-25",
+      "eventId": "401921669",
+      "firstObservedAtUtc": "2026-11-25T23:02:20.266695Z",
+      "home": "Arizona St.",
+      "homeEspnTeamId": "9",
+      "homeScore": 92,
+      "scheduledStartUtc": "2026-11-25T19:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
+      "away": "LSU",
+      "awayEspnTeamId": "99",
       "awayScore": 81,
       "date": "2026-11-14",
       "eventId": "401921689",
@@ -4939,6 +4991,19 @@
       "homeEspnTeamId": "2429",
       "homeScore": 85,
       "scheduledStartUtc": "2026-11-25T16:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
+      "away": "Georgia St.",
+      "awayEspnTeamId": "2247",
+      "awayScore": 72,
+      "date": "2026-11-25",
+      "eventId": "401921703",
+      "firstObservedAtUtc": "2026-11-25T23:02:20.266695Z",
+      "home": "FGCU",
+      "homeEspnTeamId": "526",
+      "homeScore": 77,
+      "scheduledStartUtc": "2026-11-25T21:00:00Z",
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
@@ -5030,6 +5095,19 @@
       "homeEspnTeamId": "36",
       "homeScore": 81,
       "scheduledStartUtc": "2026-11-25T03:30:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
+      "away": "Ole Miss",
+      "awayEspnTeamId": "145",
+      "awayScore": 73,
+      "date": "2026-11-25",
+      "eventId": "401921715",
+      "firstObservedAtUtc": "2026-11-25T23:02:20.266695Z",
+      "home": "Arizona",
+      "homeEspnTeamId": "12",
+      "homeScore": 84,
+      "scheduledStartUtc": "2026-11-25T19:30:00Z",
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
@@ -5836,6 +5914,19 @@
       "homeEspnTeamId": "163",
       "homeScore": 75,
       "scheduledStartUtc": "2026-11-21T00:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
+      "away": "Princeton",
+      "awayEspnTeamId": "163",
+      "awayScore": 79,
+      "date": "2026-11-25",
+      "eventId": "401924737",
+      "firstObservedAtUtc": "2026-11-25T23:02:20.266695Z",
+      "home": "Liberty",
+      "homeEspnTeamId": "2335",
+      "homeScore": 72,
+      "scheduledStartUtc": "2026-11-25T21:00:00Z",
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
@@ -7009,6 +7100,19 @@
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
+      "away": "Arkansas St.",
+      "awayEspnTeamId": "2032",
+      "awayScore": 92,
+      "date": "2026-11-25",
+      "eventId": "401928359",
+      "firstObservedAtUtc": "2026-11-25T23:02:20.266695Z",
+      "home": "FIU",
+      "homeEspnTeamId": "2229",
+      "homeScore": 88,
+      "scheduledStartUtc": "2026-11-25T20:30:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
       "away": "Southern Miss.",
       "awayEspnTeamId": "2572",
       "awayScore": 103,
@@ -7175,6 +7279,19 @@
       "homeEspnTeamId": "2006",
       "homeScore": 87,
       "scheduledStartUtc": "2026-11-24T17:30:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
+      "away": "Akron",
+      "awayEspnTeamId": "2006",
+      "awayScore": 66,
+      "date": "2026-11-25",
+      "eventId": "401928836",
+      "firstObservedAtUtc": "2026-11-25T23:02:20.266695Z",
+      "home": "App State",
+      "homeEspnTeamId": "2026",
+      "homeScore": 76,
+      "scheduledStartUtc": "2026-11-25T20:00:00Z",
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
