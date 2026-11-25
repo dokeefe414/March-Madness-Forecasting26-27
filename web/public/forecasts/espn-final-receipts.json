@@ -2342,6 +2342,19 @@
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
+      "away": "Abilene Christian",
+      "awayEspnTeamId": "2000",
+      "awayScore": 101,
+      "date": "2026-11-25",
+      "eventId": "401917967",
+      "firstObservedAtUtc": "2026-11-25T21:31:48.848954Z",
+      "home": "South Dakota St.",
+      "homeEspnTeamId": "2571",
+      "homeScore": 95,
+      "scheduledStartUtc": "2026-11-25T19:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
       "away": "ULM",
       "awayEspnTeamId": "2433",
       "awayScore": 62,
@@ -3408,6 +3421,19 @@
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
+      "away": "Virginia",
+      "awayEspnTeamId": "258",
+      "awayScore": 60,
+      "date": "2026-11-25",
+      "eventId": "401920428",
+      "firstObservedAtUtc": "2026-11-25T21:31:48.848954Z",
+      "home": "Marquette",
+      "homeEspnTeamId": "269",
+      "homeScore": 54,
+      "scheduledStartUtc": "2026-11-25T17:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
       "away": "Rutgers",
       "awayEspnTeamId": "164",
       "awayScore": 73,
@@ -3977,6 +4003,19 @@
       "homeEspnTeamId": "2217",
       "homeScore": 63,
       "scheduledStartUtc": "2026-11-15T00:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
+      "away": "Manhattan",
+      "awayEspnTeamId": "2363",
+      "awayScore": 81,
+      "date": "2026-11-25",
+      "eventId": "401920868",
+      "firstObservedAtUtc": "2026-11-25T21:31:48.848954Z",
+      "home": "NJIT",
+      "homeEspnTeamId": "2885",
+      "homeScore": 70,
+      "scheduledStartUtc": "2026-11-25T19:00:00Z",
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
@@ -5735,6 +5774,19 @@
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
+      "away": "Saint Peter's",
+      "awayEspnTeamId": "2612",
+      "awayScore": 44,
+      "date": "2026-11-25",
+      "eventId": "401924705",
+      "firstObservedAtUtc": "2026-11-25T21:31:48.848954Z",
+      "home": "Columbia",
+      "homeEspnTeamId": "171",
+      "homeScore": 65,
+      "scheduledStartUtc": "2026-11-25T19:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
       "away": "Cornell",
       "awayEspnTeamId": "172",
       "awayScore": 82,
@@ -7383,6 +7435,19 @@
       "homeEspnTeamId": "250",
       "homeScore": 80,
       "scheduledStartUtc": "2026-11-25T01:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
+      "away": "Ark.-Pine Bluff",
+      "awayEspnTeamId": "2029",
+      "awayScore": 50,
+      "date": "2026-11-25",
+      "eventId": "401929406",
+      "firstObservedAtUtc": "2026-11-25T21:31:48.848954Z",
+      "home": "South Dakota",
+      "homeEspnTeamId": "233",
+      "homeScore": 86,
+      "scheduledStartUtc": "2026-11-25T19:00:00Z",
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
