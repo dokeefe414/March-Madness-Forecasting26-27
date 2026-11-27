@@ -3733,6 +3733,19 @@
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
+      "away": "Virginia",
+      "awayEspnTeamId": "258",
+      "awayScore": 83,
+      "date": "2026-11-27",
+      "eventId": "401920429",
+      "firstObservedAtUtc": "2026-11-27T19:53:24.242093Z",
+      "home": "Xavier",
+      "homeEspnTeamId": "2752",
+      "homeScore": 71,
+      "scheduledStartUtc": "2026-11-27T16:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
       "away": "Rutgers",
       "awayEspnTeamId": "164",
       "awayScore": 73,
@@ -4445,6 +4458,19 @@
       "homeEspnTeamId": "350",
       "homeScore": 86,
       "scheduledStartUtc": "2026-11-26T00:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
+      "away": "St. Thomas (MN)",
+      "awayEspnTeamId": "2900",
+      "awayScore": 67,
+      "date": "2026-11-27",
+      "eventId": "401920848",
+      "firstObservedAtUtc": "2026-11-27T19:53:24.242093Z",
+      "home": "Liberty",
+      "homeEspnTeamId": "2335",
+      "homeScore": 76,
+      "scheduledStartUtc": "2026-11-27T17:00:00Z",
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
@@ -6538,6 +6564,19 @@
       "homeEspnTeamId": "2329",
       "homeScore": 65,
       "scheduledStartUtc": "2026-11-14T00:00:00Z",
+      "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
+    },
+    {
+      "away": "Merrimack",
+      "awayEspnTeamId": "2771",
+      "awayScore": 75,
+      "date": "2026-11-27",
+      "eventId": "401924810",
+      "firstObservedAtUtc": "2026-11-27T19:53:24.242093Z",
+      "home": "Vermont",
+      "homeEspnTeamId": "261",
+      "homeScore": 57,
+      "scheduledStartUtc": "2026-11-27T18:00:00Z",
       "source": "ESPN college basketball STATUS_FINAL and season-2027 provider-authorized team IDs"
     },
     {
